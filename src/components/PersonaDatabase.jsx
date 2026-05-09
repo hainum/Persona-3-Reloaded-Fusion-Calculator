@@ -106,12 +106,12 @@ function PersonaDetail({ personaName, onBack }) {
   const forwardFusions = getForwardFusions(personaName);
 
   return (
-    <div className="flex-col gap-4">
-      <button className="flex items-center gap-2" onClick={onBack} style={{ alignSelf: 'flex-start', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', padding: '6px 14px' }}>
-        <ArrowLeft size={16} /> Back to Persona List
-      </button>
+      <div className="flex-col gap-6">
+        <button className="flex items-center gap-2" onClick={onBack} style={{ alignSelf: 'flex-start', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', padding: '6px 14px' }}>
+          <ArrowLeft size={16} /> Back to Persona List
+        </button>
 
-      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)' }}>
           <div className="flex justify-between items-center">
             <div>
@@ -334,7 +334,7 @@ export default function PersonaDatabase() {
       <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
         {tab === 'personas' ? (
           <>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
               <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
                 <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
                 <input
