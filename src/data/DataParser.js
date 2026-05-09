@@ -10,7 +10,7 @@ for (const [key, row] of Object.entries(skillDataRaw)) {
   const name = row.a[0];
   const elem = row.a[1];
   const target = row.a[2];
-  const rank = row.b[0] || 99; // Rank 0 (or undefined) usually means exclusive/uninheritable
+  const rank = row.b[0] || 99;
 
   skillData[name] = {
     name,
@@ -18,8 +18,15 @@ for (const [key, row] of Object.entries(skillDataRaw)) {
     target,
     rank,
     id: key,
-    // Add other fields if needed, like cost
-    cost: row.b[1]
+    cost: row.b[1],
+    power: row.b[2],
+    hits: [row.b[3], row.b[4]],
+    accuracy: row.b[5],
+    critRate: row.b[6],
+    ailmentChance: row.b[7],
+    statusEffect: row.c[0] === '-' ? null : row.c[0],
+    effectDesc: row.c[1] === '-' ? null : row.c[1],
+    weaponSource: row.c[2] === '-' ? null : row.c[2],
   };
 }
 
@@ -43,6 +50,25 @@ const inheritElems = compConfigRaw.inheritElems;
 const inheritTypes = {};
 for (const [type, bits] of Object.entries(compConfigRaw.inheritTypes)) {
   inheritTypes[type] = bits.split('').map(b => b === '1');
+}
+
+// Personas sorted by level for database listing
+const personaList = Object.entries(demonDataRaw)
+  .map(([name, data]) => ({ name, lvl: data.lvl, race: data.race }))
+  .sort((a, b) => a.lvl - b.lvl);
+
+// Reverse index: skill name → personas that learn it via leveling up (unlock level >= 1)
+const skillLearnedBy = {};
+for (const [pName, pData] of Object.entries(demonDataRaw)) {
+  for (const [sName, unlockLvl] of Object.entries(pData.skills)) {
+    if (unlockLvl >= 1) {
+      if (!skillLearnedBy[sName]) skillLearnedBy[sName] = [];
+      skillLearnedBy[sName].push({ personaName: pName, level: unlockLvl });
+    }
+  }
+}
+for (const entries of Object.values(skillLearnedBy)) {
+  entries.sort((a, b) => a.level - b.level);
 }
 
 // Determine if a Persona can inherit a specific skill.
@@ -79,6 +105,8 @@ export function isSkillInheritable(skillName) {
 export {
   skillData,
   personaData,
+  personaList,
+  skillLearnedBy,
   fusionChartRaw as fusionChart,
   specialRecipesRaw as specialRecipes,
   compConfigRaw as compConfig

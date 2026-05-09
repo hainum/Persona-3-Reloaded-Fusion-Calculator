@@ -15,6 +15,7 @@
 - **Strict layering** (enforced by convention): `data/` → `lib/` → `components/`. Never import upward.
 - **No state library** — all state in `App.jsx` via `useState`. New persisted settings use `localStorage` with `p3r_` prefix.
 - **No CSS framework** — vanilla CSS custom properties in `src/index.css`.
+- **Top-level nav**: `App.jsx` has Calculator / Database views switched via `useState`. No router library.
 - **Canonical references**: `DESIGN.md` (architecture), `docs/SEARCH_ALGORITHM.md` (algorithm).
 
 ## Gotchas
@@ -31,14 +32,20 @@
 - **New config params** to `findFusionPaths`: add as nullable with `null` default ("not set / don't filter").
 - **5 paths per sub-problem** limit — hardcoded to prevent combinatorial explosion.
 
+## Gotchas (continued)
+
+- **Unicode in JSX text**: `\uXXXX` escape sequences are not processed in JSX text content. Wrap in `{'\uXXXX'}` or use the actual character.
+- **`getForwardFusions`** in `FusionCalculator.js` — precomputed at module load alongside `recipeMap`. Returns fusions where a given persona is an ingredient.
+
 ## Key Files
 
 | Path | Role |
 |------|------|
 | `src/main.jsx` | React root mount |
-| `src/App.jsx` | Top-level state & orchestration |
-| `src/data/DataParser.js` | JSON → runtime maps, `canInherit()`, `isSkillInheritable()` |
-| `src/lib/FusionCalculator.js` | Recipe precomputation + backward-chaining search |
+| `src/App.jsx` | Top-level state & orchestration, Calculator/Database nav |
+| `src/data/DataParser.js` | JSON → runtime maps, `canInherit()`, `isSkillInheritable()`, `personaList`, `skillLearnedBy` |
+| `src/lib/FusionCalculator.js` | Recipe precomputation + backward-chaining search + `getForwardFusions()` |
 | `src/components/SearchableSelect.jsx` | Searchable dropdown |
 | `src/components/FusionPathViewer.jsx` | Recursive tree renderer |
+| `src/components/PersonaDatabase.jsx` | Persona list + skill list tables, persona detail view with resistances, learned skills, reverse/forward fusions |
 | `tests/algorithm.test.js` | All tests (single file, plain Node.js) |

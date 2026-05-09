@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, ChevronDown, Check } from 'lucide-react';
 
 export default function SearchableSelect({ label, options, value, onChange, placeholder, noMargin }) {

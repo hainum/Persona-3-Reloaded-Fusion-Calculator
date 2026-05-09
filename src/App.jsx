@@ -1,11 +1,13 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import SearchableSelect from './components/SearchableSelect';
 import FusionPathViewer from './components/FusionPathViewer';
+import PersonaDatabase from './components/PersonaDatabase';
 import { personaData, skillData, isSkillInheritable } from './data/DataParser';
 import { findFusionPaths } from './lib/FusionCalculator';
-import { Settings, Zap, Search, X } from 'lucide-react';
+import { Settings, Zap, Search, X, Calculator, Database } from 'lucide-react';
 
 export default function App() {
+  const [view, setView] = useState('calculator');
   const [targetPersona, setTargetPersona] = useState('');
   const [targetSkills, setTargetSkills] = useState(['', '', '', '', '', '', '', '']);
   const [paths, setPaths] = useState(null);
@@ -78,150 +80,172 @@ export default function App() {
 
   return (
     <div className="container flex-col gap-6">
-      <header className="flex justify-between items-center glass-panel" style={{ marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ marginBottom: '0.5rem' }}><Zap size={28} className="text-cyan" style={{ verticalAlign: 'middle', marginRight: '10px' }}/>P3R Fusion Calculator</h1>
-          <p className="text-muted" style={{ margin: 0 }}>Discover the shortest paths to fuse your perfect Persona.</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center" style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '5px 10px' }}>
-            <span style={{ marginRight: '10px', color: 'var(--p3r-text-muted)', fontSize: '0.9rem' }}>Current Level</span>
-            <button 
-              style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
-              onClick={() => setCurrentLevel(Math.max(1, currentLevel - 1))}
-            >-</button>
-            <input 
-              type="number" 
-              value={currentLevel} 
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                if (!isNaN(val)) setCurrentLevel(Math.min(99, Math.max(1, val)));
-              }}
-              style={{ width: '50px', textAlign: 'center', border: 'none', background: 'transparent', padding: '0', margin: '0 5px' }}
-              min="1" max="99"
-            />
-            <button 
-              style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
-              onClick={() => setCurrentLevel(Math.min(99, currentLevel + 1))}
-            >+</button>
+      <header className="glass-panel" style={{ marginBottom: '2rem', padding: '0' }}>
+        <div className="flex justify-between items-center" style={{ padding: '20px 24px 0' }}>
+          <div>
+            <h1 style={{ marginBottom: '0.25rem' }}><Zap size={28} className="text-cyan" style={{ verticalAlign: 'middle', marginRight: '10px' }}/>P3R Fusion Calculator</h1>
+            <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>Persona 3 Reload — Fusion Tool & Database</p>
           </div>
-          <button className="flex items-center gap-2"><Settings size={18} /> Settings</button>
+          {view === 'calculator' && (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center" style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '5px 10px' }}>
+                <span style={{ marginRight: '10px', color: 'var(--p3r-text-muted)', fontSize: '0.9rem' }}>Current Level</span>
+                <button 
+                  style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
+                  onClick={() => setCurrentLevel(Math.max(1, currentLevel - 1))}
+                >-</button>
+                <input 
+                  type="number" 
+                  value={currentLevel} 
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val)) setCurrentLevel(Math.min(99, Math.max(1, val)));
+                  }}
+                  style={{ width: '50px', textAlign: 'center', border: 'none', background: 'transparent', padding: '0', margin: '0 5px' }}
+                  min="1" max="99"
+                />
+                <button 
+                  style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
+                  onClick={() => setCurrentLevel(Math.min(99, currentLevel + 1))}
+                >+</button>
+              </div>
+              <button className="flex items-center gap-2"><Settings size={18} /> Settings</button>
+            </div>
+          )}
         </div>
+        <nav className="flex" style={{ borderTop: '1px solid var(--glass-border)', marginTop: '16px', padding: '0 24px' }}>
+          <button
+            className={`nav-tab ${view === 'calculator' ? 'active' : ''}`}
+            onClick={() => setView('calculator')}
+          >
+            <Calculator size={16} /> Calculator
+          </button>
+          <button
+            className={`nav-tab ${view === 'database' ? 'active' : ''}`}
+            onClick={() => setView('database')}
+          >
+            <Database size={16} /> Database
+          </button>
+        </nav>
       </header>
 
-      <div className="grid" style={{ gridTemplateColumns: '350px 1fr', gap: '2rem', alignItems: 'start' }}>
-        <aside className="glass-panel flex-col gap-4">
-          <h2>Configuration</h2>
-          
-          <SearchableSelect 
-            label="Target Persona"
-            placeholder="Select Persona..."
-            options={personaOptions}
-            value={targetPersona}
-            onChange={setTargetPersona}
-          />
-
-          <div style={{ marginTop: '1rem' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Target Skills</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-              {targetSkills.map((skill, i) => (
-                <SearchableSelect 
-                  key={i}
-                  placeholder={`Skill ${i + 1}`}
-                  options={[{value: '', label: 'None'}, ...skillOptions]}
-                  value={skill}
-                  onChange={(val) => handleSkillChange(i, val)}
-                  noMargin={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div style={{ marginTop: '1rem' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Include Personas</h3>
-            <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Only show paths containing these Personas.</span>
+      {view === 'calculator' ? (
+        <div className="grid" style={{ gridTemplateColumns: '350px 1fr', gap: '2rem', alignItems: 'start' }}>
+          <aside className="glass-panel flex-col gap-4">
+            <h2>Configuration</h2>
             
-            {requiredPersonas.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                {requiredPersonas.map(name => (
-                  <span 
-                    key={name} 
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '4px',
-                      background: 'rgba(0, 229, 255, 0.15)', border: '1px solid rgba(0, 229, 255, 0.3)',
-                      borderRadius: '4px', padding: '3px 8px', fontSize: '0.85rem',
-                      color: 'var(--p3r-cyan)'
-                    }}
-                  >
-                    {name}
-                    <X 
-                      size={14} 
-                      style={{ cursor: 'pointer', opacity: 0.7 }} 
-                      onClick={() => handleRemoveRequiredPersona(name)} 
-                    />
-                  </span>
+            <SearchableSelect 
+              label="Target Persona"
+              placeholder="Select Persona..."
+              options={personaOptions}
+              value={targetPersona}
+              onChange={setTargetPersona}
+            />
+
+            <div style={{ marginTop: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Target Skills</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                {targetSkills.map((skill, i) => (
+                  <SearchableSelect 
+                    key={i}
+                    placeholder={`Skill ${i + 1}`}
+                    options={[{value: '', label: 'None'}, ...skillOptions]}
+                    value={skill}
+                    onChange={(val) => handleSkillChange(i, val)}
+                    noMargin={true}
+                  />
                 ))}
+              </div>
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Include Personas</h3>
+              <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Only show paths containing these Personas.</span>
+              
+              {requiredPersonas.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {requiredPersonas.map(name => (
+                    <span 
+                      key={name} 
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        background: 'rgba(0, 229, 255, 0.15)', border: '1px solid rgba(0, 229, 255, 0.3)',
+                        borderRadius: '4px', padding: '3px 8px', fontSize: '0.85rem',
+                        color: 'var(--p3r-cyan)'
+                      }}
+                    >
+                      {name}
+                      <X 
+                        size={14} 
+                        style={{ cursor: 'pointer', opacity: 0.7 }} 
+                        onClick={() => handleRemoveRequiredPersona(name)} 
+                      />
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <RequiredPersonaSearch 
+                personaOptions={personaOptions} 
+                excludeNames={requiredPersonas}
+                onSelect={handleAddRequiredPersona} 
+              />
+            </div>
+
+            <button 
+              className="primary" 
+              style={{ width: '100%', marginTop: '1rem' }}
+              onClick={() => handleCalculate(2)}
+              disabled={!targetPersona || isCalculating}
+            >
+              {isCalculating ? 'Calculating...' : 'Calculate Paths'}
+            </button>
+          </aside>
+
+          <main className="glass-panel" style={{ minHeight: '500px' }}>
+            <h2>Fusion Paths</h2>
+            
+            {error && (
+              <div style={{ background: 'rgba(255, 50, 50, 0.2)', padding: '15px', borderRadius: '8px', border: '1px solid #ff4444', color: '#ffaaaa' }}>
+                <strong>Error: </strong> {error}
               </div>
             )}
 
-            <RequiredPersonaSearch 
-              personaOptions={personaOptions} 
-              excludeNames={requiredPersonas}
-              onSelect={handleAddRequiredPersona} 
-            />
-          </div>
-
-          <button 
-            className="primary" 
-            style={{ width: '100%', marginTop: '1rem' }}
-            onClick={() => handleCalculate(2)}
-            disabled={!targetPersona || isCalculating}
-          >
-            {isCalculating ? 'Calculating...' : 'Calculate Paths'}
-          </button>
-        </aside>
-
-        <main className="glass-panel" style={{ minHeight: '500px' }}>
-          <h2>Fusion Paths</h2>
-          
-          {error && (
-            <div style={{ background: 'rgba(255, 50, 50, 0.2)', padding: '15px', borderRadius: '8px', border: '1px solid #ff4444', color: '#ffaaaa' }}>
-              <strong>Error: </strong> {error}
-            </div>
-          )}
-
-          {!error && !paths && !isCalculating && (
-            <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
-              Select a Target Persona and desired skills, then click Calculate to see fusion paths.
-            </div>
-          )}
-
-          {isCalculating && (
-            <div className="text-cyan" style={{ textAlign: 'center', marginTop: '4rem' }}>
-              Searching the Sea of Souls... (Depth {searchDepth})
-            </div>
-          )}
-
-          {paths && paths.length === 0 && !isCalculating && (
-            <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
-              No paths found within depth {searchDepth}. <br/><br/>
-              <button onClick={() => handleCalculate(searchDepth + 1)}>See More (Increase Depth)</button>
-            </div>
-          )}
-
-          {paths && paths.length > 0 && !isCalculating && (
-            <div>
-              <p className="text-cyan">Found {paths.length} valid paths.</p>
-              
-              <FusionPathViewer paths={paths} />
-
-              <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-                 <button onClick={() => handleCalculate(searchDepth + 1)}>See Deeper Paths</button>
+            {!error && !paths && !isCalculating && (
+              <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
+                Select a Target Persona and desired skills, then click Calculate to see fusion paths.
               </div>
-            </div>
-          )}
-        </main>
-      </div>
+            )}
+
+            {isCalculating && (
+              <div className="text-cyan" style={{ textAlign: 'center', marginTop: '4rem' }}>
+                Searching the Sea of Souls... (Depth {searchDepth})
+              </div>
+            )}
+
+            {paths && paths.length === 0 && !isCalculating && (
+              <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
+                No paths found within depth {searchDepth}. <br/><br/>
+                <button onClick={() => handleCalculate(searchDepth + 1)}>See More (Increase Depth)</button>
+              </div>
+            )}
+
+            {paths && paths.length > 0 && !isCalculating && (
+              <div>
+                <p className="text-cyan">Found {paths.length} valid paths.</p>
+                
+                <FusionPathViewer paths={paths} />
+
+                <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                   <button onClick={() => handleCalculate(searchDepth + 1)}>See Deeper Paths</button>
+                </div>
+              </div>
+            )}
+          </main>
+        </div>
+      ) : (
+        <PersonaDatabase />
+      )}
     </div>
   );
 }

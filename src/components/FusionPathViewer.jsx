@@ -1,4 +1,3 @@
-import React from 'react';
 import { personaData } from '../data/DataParser';
 
 export default function FusionPathViewer({ paths }) {

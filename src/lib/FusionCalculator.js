@@ -123,6 +123,29 @@ export function getAllRecipes(personaName) {
   return recipeMap[personaName] || [];
 }
 
+// Precompute forward fusions: persona → fusions where it appears as an ingredient
+const forwardFusionMap = {};
+for (const pName of allPersonas) {
+  forwardFusionMap[pName] = [];
+}
+for (const [resultName, recipes] of Object.entries(recipeMap)) {
+  for (const recipe of recipes) {
+    for (const ingName of recipe.ingredients) {
+      if (forwardFusionMap[ingName]) {
+        forwardFusionMap[ingName].push({
+          result: resultName,
+          otherIngredients: recipe.ingredients.filter(n => n !== ingName),
+          isSpecial: recipe.isSpecial,
+        });
+      }
+    }
+  }
+}
+
+export function getForwardFusions(personaName) {
+  return forwardFusionMap[personaName] || [];
+}
+
 function getInnateSkills(personaName) {
   const p = personaData[personaName];
   if (!p) return [];
