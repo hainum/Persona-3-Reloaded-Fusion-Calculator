@@ -88,7 +88,8 @@ const FMT_DESC = {
   FMTBase: (s) => {
     if (s.elem === 'rec') {
       const what = (s.statusEffect || 'HP').replace(/ restore/i, '');
-      return `Restore ${s.power} ${what} to ${s.target}`;
+      if (s.power > 0) return `Restore ${s.power} ${what} to ${s.target}`;
+      return `${what} to ${s.target}`;
     }
     return `${s.power} ${ELEM_LABELS[s.elem] || s.elem.toUpperCase()} dmg to ${s.target}`;
   },
@@ -193,7 +194,11 @@ for (const [pName, pData] of Object.entries(demonDataRaw)) {
   }
 }
 for (const entries of Object.values(skillLearnedBy)) {
-  entries.sort((a, b) => a.level - b.level);
+  entries.sort((a, b) => {
+    const aLvl = a.level < 1 ? (personaData[a.personaName]?.lvl ?? a.level) : a.level;
+    const bLvl = b.level < 1 ? (personaData[b.personaName]?.lvl ?? b.level) : b.level;
+    return aLvl - bLvl;
+  });
 }
 
 // ── Replicate FusionCalculator.js ───────────────────────────────
@@ -627,10 +632,11 @@ console.log('\n── skillLearnedBy Index ──');
   assert(diaLearners && diaLearners.length >= 3,
     'Dia: has 3+ learners');
 
-  // SkillLearnedBy entries sorted by level
+  // SkillLearnedBy entries sorted by display level (persona level for innate, unlock level for learned)
   if (diaLearners) {
+    const getDisplayLvl = (l) => l.level < 1 ? (personaData[l.personaName]?.lvl ?? l.level) : l.level;
     for (let i = 1; i < diaLearners.length; i++) {
-      assert(diaLearners[i].level >= diaLearners[i - 1].level,
+      assert(getDisplayLvl(diaLearners[i]) >= getDisplayLvl(diaLearners[i - 1]),
         `Dia learners sorted by level: index ${i}`);
     }
   }

@@ -66,7 +66,11 @@ for (const [pName, pData] of Object.entries(demonDataRaw)) {
   }
 }
 for (const entries of Object.values(skillLearnedBy)) {
-  entries.sort((a, b) => a.level - b.level);
+  entries.sort((a, b) => {
+    const aLvl = a.level < 1 ? (personaData[a.personaName]?.lvl ?? a.level) : a.level;
+    const bLvl = b.level < 1 ? (personaData[b.personaName]?.lvl ?? b.level) : b.level;
+    return aLvl - bLvl;
+  });
 }
 
 // Determine if a Persona can inherit a specific skill.

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { personaData, skillData, personaList, skillLearnedBy, compConfig } from '../data/DataParser';
 import { getAllRecipes, getForwardFusions } from '../lib/FusionCalculator';
-import { Search, List, ShieldQuestion, ArrowUpDown, ArrowLeft, Star, BookmarkPlus, Plus } from 'lucide-react';
+import { Search, List, ShieldQuestion, ArrowUpDown, ArrowLeft, Star, BookmarkPlus, Plus, Lock } from 'lucide-react';
 import { SaveBookmarkModal, AddSkillToBookmarkModal } from './BookmarkModal';
 
 const ELEM_LABELS = {
@@ -30,7 +30,8 @@ const FMT_DESC = {
   FMTBase: (s) => {
     if (s.elem === 'rec') {
       const what = (s.statusEffect || 'HP').replace(/ restore/i, '');
-      return `Restore ${s.power} ${what} to ${s.target}`;
+      if (s.power > 0) return `Restore ${s.power} ${what} to ${s.target}`;
+      return `${what} to ${s.target}`;
     }
     return `${s.power} ${ELEM_LABELS[s.elem] || s.elem.toUpperCase()} dmg to ${s.target}`;
   },
@@ -146,8 +147,8 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
     if (!pData) return [];
     return Object.entries(pData.skills)
       .filter(([, lvl]) => lvl < 1)
-      .map(([sName]) => sName)
-      .filter(n => skillData[n]);
+      .map(([sName]) => ({ ...skillData[sName] }))
+      .filter(s => s.name);
   }, [pData]);
 
   const resistRows = useMemo(() => {
@@ -197,16 +198,7 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
               >
                 <BookmarkPlus size={14} /> Bookmark
               </button>
-              {innateSkills.length > 0 && (
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--p3r-text-muted)' }}>Innate Skills</span>
-                  <div className="flex gap-1" style={{ flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: '4px' }}>
-                    {innateSkills.map(s => (
-                      <span key={s} className="elem-badge" style={{ background: 'rgba(76, 175, 80, 0.15)', color: '#81c784', borderColor: 'rgba(76, 175, 80, 0.3)' }}>{s}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              
             </div>
           </div>
         </div>
@@ -223,6 +215,32 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
             ))}
           </div>
         </div>
+
+        {innateSkills.length > 0 && (
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
+            <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Innate Skills</h3>
+            <table className="data-table" style={{ fontSize: '0.85rem' }}>
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Element</th>
+                  <th>Effect</th>
+                  <th>Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {innateSkills.map(s => (
+                  <tr key={s.name}>
+                    <td><strong>{s.name}</strong></td>
+                    <td><span className="elem-badge">{ELEM_LABELS[s.elem] || s.elem.toUpperCase()}</span></td>
+                    <td style={{ color: 'var(--p3r-text-muted)', maxWidth: '260px' }}>{getEffect(s)}</td>
+                    <td>{s.cost > 0 ? `${s.cost} SP` : '\u2014'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
           <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Learned Skills</h3>
@@ -405,7 +423,7 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
   }, [personaSearch, personaSort, personaColumns]);
 
   const filteredSkills = useMemo(() => {
-    let list = Object.values(skillData);
+    let list = Object.values(skillData).filter(s => skillLearnedBy[s.name]);
     if (skillSearch.trim()) {
       const q = skillSearch.toLowerCase();
       list = list.filter(s =>
@@ -414,8 +432,17 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
         (s.statusEffect && s.statusEffect.toLowerCase().includes(q))
       );
     }
-    const col = skillColumns.find(c => c.key === skillSort.key);
-    if (col) list = [...list].sort((a, b) => col.compareFn(a, b, skillSort.asc));
+    if (skillSort.key === 'minLvl') {
+      const getMinLvl = (s) => {
+        const learners = skillLearnedBy[s.name];
+        if (!learners || learners.length === 0) return 99;
+        return Math.min(...learners.map(l => l.level < 1 ? (personaData[l.personaName]?.lvl ?? l.level) : l.level));
+      };
+      list = [...list].sort((a, b) => skillSort.asc ? getMinLvl(a) - getMinLvl(b) : getMinLvl(b) - getMinLvl(a));
+    } else {
+      const col = skillColumns.find(c => c.key === skillSort.key);
+      if (col) list = [...list].sort((a, b) => col.compareFn(a, b, skillSort.asc));
+    }
     return list;
   }, [skillSearch, skillSort, skillColumns]);
 
@@ -541,6 +568,12 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                       ))}
                       <th>Effect</th>
                       <th>Cost</th>
+                      <th onClick={() => { setSkillSort(prev => ({ key: 'minLvl', asc: prev.key === 'minLvl' ? !prev.asc : true })); }} style={{ cursor: 'pointer' }}>
+                        <span className="flex items-center gap-1">
+                          Min Lv
+                          <ArrowUpDown size={12} style={{ opacity: skillSort.key === 'minLvl' ? 1 : 0.3 }} />
+                        </span>
+                      </th>
                       <th>Learned By</th>
                       <th style={{ width: '50px' }}></th>
                     </tr>
@@ -550,19 +583,27 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                       const learners = skillLearnedBy[s.name];
                       return (
                         <tr key={s.name}>
-                          <td><strong>{s.name}</strong></td>
+                          <td>
+                            <strong>{s.name}</strong>
+                            {learners?.length === 1 && s.rank >= 99 && (
+                              <Lock size={12} style={{ marginLeft: '6px', color: 'var(--p3r-text-muted)', verticalAlign: 'middle' }} title="Unique skill" />
+                            )}
+                          </td>
                           <td><span className="elem-badge">{ELEM_LABELS[s.elem] || s.elem.toUpperCase()}</span></td>
                           <td style={{ maxWidth: '300px', fontSize: '0.9rem', color: 'var(--p3r-text-muted)' }}>{getEffect(s)}</td>
                           <td>{s.cost > 0 ? `${s.cost} SP` : '\u2014'}</td>
+                          <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>
+                            {learners ? Math.min(...learners.map(l => l.level < 1 ? (personaData[l.personaName]?.lvl ?? l.level) : l.level)) : '\u2014'}
+                          </td>
                           <td style={{ maxWidth: '280px', fontSize: '0.85rem' }}>
                             {learners && learners.length > 0 ? (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                                {learners.slice(0, 3).map(l => (
-                                  <span key={l.personaName} className="learner-tag">{l.personaName} {l.level < 1 ? '(Base)' : '(Lv' + l.level + ')'}</span>
-                                ))}
-                                {learners.length > 3 && (
-                                  <span className="learner-tag" style={{ opacity: 0.6 }}>+{learners.length - 3} more</span>
-                                )}
+                                {learners.map(l => {
+                                  const displayLvl = l.level < 1 ? personaData[l.personaName]?.lvl ?? l.level : l.level;
+                                  return (
+                                    <span key={l.personaName} className="learner-tag">({displayLvl}) {l.personaName}</span>
+                                  );
+                                })}
                               </div>
                             ) : (
                               <span style={{ color: 'var(--p3r-text-muted)' }}>{'\u2014'}</span>
@@ -581,7 +622,7 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                       );
                     })}
                     {filteredSkills.length === 0 && (
-                      <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--p3r-text-muted)', padding: '2rem' }}>No skills match your search.</td></tr>
+                      <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--p3r-text-muted)', padding: '2rem' }}>No skills match your search.</td></tr>
                     )}
                   </tbody>
                 </table>

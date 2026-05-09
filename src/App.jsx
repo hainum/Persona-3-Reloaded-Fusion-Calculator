@@ -7,7 +7,7 @@ import { SaveBookmarkModal } from './components/BookmarkModal';
 import { personaData, skillData, isSkillInheritable } from './data/DataParser';
 import { findFusionPaths } from './lib/FusionCalculator';
 import { loadBookmarks, saveBookmarks, createBookmark, findMatchingBookmark } from './lib/BookmarkManager';
-import { Settings, Zap, Search, X, Calculator, Database, Bookmark, BookmarkPlus } from 'lucide-react';
+import { Zap, Search, X, Calculator, Database, Bookmark, BookmarkPlus } from 'lucide-react';
 
 export default function App() {
   const [view, setView] = useState('calculator');
@@ -25,6 +25,8 @@ export default function App() {
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
   const [bookmarkDrawerOpen, setBookmarkDrawerOpen] = useState(false);
   const [saveBookmarkConfig, setSaveBookmarkConfig] = useState(null);
+  const [showFloatingDeeper, setShowFloatingDeeper] = useState(false);
+  const deeperBtnRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem('p3r_currentLevel', currentLevel);
@@ -33,6 +35,17 @@ export default function App() {
   useEffect(() => {
     saveBookmarks(bookmarks);
   }, [bookmarks]);
+
+  useEffect(() => {
+    const el = deeperBtnRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowFloatingDeeper(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [paths]);
 
   const matchingBookmark = useMemo(() => {
     if (view !== 'calculator') return null;
@@ -152,7 +165,7 @@ export default function App() {
                   onClick={() => setCurrentLevel(Math.min(99, currentLevel + 1))}
                 >+</button>
               </div>
-              <button className="flex items-center gap-2"><Settings size={18} /> Settings</button>
+              
             </div>
           )}
         </div>
@@ -309,12 +322,27 @@ export default function App() {
                 
                 <FusionPathViewer paths={paths} />
 
-                <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                <div ref={deeperBtnRef} style={{ marginTop: '2rem', textAlign: 'center' }}>
                    <button onClick={() => handleCalculate(searchDepth + 1)}>See Deeper Paths</button>
                 </div>
               </div>
             )}
           </main>
+          {showFloatingDeeper && (
+            <button
+              onClick={() => handleCalculate(searchDepth + 1)}
+              title="See Deeper Paths"
+              style={{
+                position: 'fixed', bottom: '24px', right: '24px', zIndex: 100,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                width: '48px', height: '48px', borderRadius: '50%',
+                padding: 0, fontSize: '1.5rem', lineHeight: 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+            >
+              +
+            </button>
+          )}
         </div>
       ) : (
         <PersonaDatabase
@@ -351,7 +379,9 @@ export default function App() {
 function RequiredPersonaSearch({ personaOptions, excludeNames, onSelect }) {
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const wrapperRef = useRef(null);
+  const listRef = useRef(null);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return [];
@@ -371,10 +401,18 @@ function RequiredPersonaSearch({ personaOptions, excludeNames, onSelect }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const item = listRef.current.children[highlightedIndex];
+      if (item) item.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightedIndex]);
+
   const handleSelect = (val) => {
     onSelect(val);
     setSearch('');
     setIsOpen(false);
+    setHighlightedIndex(-1);
   };
 
   return (
@@ -385,8 +423,25 @@ function RequiredPersonaSearch({ personaOptions, excludeNames, onSelect }) {
           type="text"
           placeholder="Search persona to add..."
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setIsOpen(true); }}
+          onChange={(e) => { setSearch(e.target.value); setIsOpen(true); setHighlightedIndex(-1); }}
           onFocus={() => { if (search.trim()) setIsOpen(true); }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              setHighlightedIndex(i => Math.min(i + 1, filtered.length - 1));
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              setHighlightedIndex(i => Math.max(i - 1, 0));
+            } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+              e.preventDefault();
+              handleSelect(filtered[highlightedIndex].value);
+            } else if (e.key === 'Enter' && filtered.length === 1) {
+              e.preventDefault();
+              handleSelect(filtered[0].value);
+            } else if (e.key === 'Escape') {
+              setIsOpen(false);
+            }
+          }}
           style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
         />
       </div>
@@ -399,14 +454,17 @@ function RequiredPersonaSearch({ personaOptions, excludeNames, onSelect }) {
           border: '1px solid var(--glass-border)', borderRadius: '8px',
           boxShadow: '0 12px 40px 0 rgba(0, 0, 0, 0.6)'
         }}>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {filtered.map(opt => (
+          <ul ref={listRef} style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {filtered.map((opt, i) => (
               <li 
                 key={opt.value}
                 onClick={() => handleSelect(opt.value)}
-                style={{ padding: '6px 10px', cursor: 'pointer', borderRadius: '4px', fontSize: '0.9rem' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 229, 255, 0.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                onMouseEnter={() => setHighlightedIndex(i)}
+                style={{
+                  padding: '6px 10px', cursor: 'pointer', borderRadius: '4px', fontSize: '0.9rem',
+                  background: i === highlightedIndex ? 'rgba(0, 229, 255, 0.2)' : 'transparent'
+                }}
+                onMouseLeave={(e) => { if (i !== highlightedIndex) e.currentTarget.style.background = 'transparent'; }}
               >
                 {opt.label}
               </li>

@@ -4,7 +4,9 @@ import { Search, ChevronDown, Check } from 'lucide-react';
 export default function SearchableSelect({ label, options, value, onChange, placeholder, noMargin }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const wrapperRef = useRef(null);
+  const listRef = useRef(null);
 
   const filteredOptions = options.filter(opt => 
     opt.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -20,10 +22,18 @@ export default function SearchableSelect({ label, options, value, onChange, plac
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [wrapperRef]);
 
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const item = listRef.current.children[highlightedIndex];
+      if (item) item.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightedIndex]);
+
   const handleSelect = (val) => {
     onChange(val);
     setIsOpen(false);
     setSearchTerm('');
+    setHighlightedIndex(-1);
   };
 
   const selectedOption = options.find(opt => opt.value === value);
@@ -33,7 +43,7 @@ export default function SearchableSelect({ label, options, value, onChange, plac
       {label && <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>{label}</label>}
       <div 
         className="select-trigger"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => { setIsOpen(!isOpen); setHighlightedIndex(-1); }}
         style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)',
@@ -62,27 +72,48 @@ export default function SearchableSelect({ label, options, value, onChange, plac
         >
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '5px' }}>
             <Search size={16} style={{ color: 'var(--p3r-text-muted)', marginRight: '8px' }} />
-            <input 
-              autoFocus
-              type="text" 
-              placeholder="Search..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ border: 'none', background: 'transparent', padding: 0, boxShadow: 'none' }}
-            />
+              <input 
+                autoFocus
+                type="text" 
+                placeholder="Search..." 
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setHighlightedIndex(-1); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setHighlightedIndex(i => Math.min(i + 1, filteredOptions.length - 1));
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setHighlightedIndex(i => Math.max(i - 1, 0));
+                  } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+                    e.preventDefault();
+                    handleSelect(filteredOptions[highlightedIndex].value);
+                  } else if (e.key === 'Enter' && filteredOptions.length === 1) {
+                    e.preventDefault();
+                    handleSelect(filteredOptions[0].value);
+                  } else if (e.key === 'Escape') {
+                    setIsOpen(false);
+                  }
+                }}
+                style={{ border: 'none', background: 'transparent', padding: 0, boxShadow: 'none' }}
+              />
           </div>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {filteredOptions.length > 0 ? filteredOptions.map(opt => (
+          <ul ref={listRef} style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {filteredOptions.length > 0 ? filteredOptions.map((opt, i) => (
               <li 
                 key={opt.value}
                 onClick={() => handleSelect(opt.value)}
+                onMouseEnter={() => setHighlightedIndex(i)}
                 style={{
                   padding: '8px 10px', cursor: 'pointer', borderRadius: '4px',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  background: opt.value === value ? 'rgba(0, 229, 255, 0.1)' : 'transparent'
+                  background: i === highlightedIndex
+                    ? 'rgba(0, 229, 255, 0.2)'
+                    : opt.value === value
+                      ? 'rgba(0, 229, 255, 0.1)'
+                      : 'transparent'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0, 229, 255, 0.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = opt.value === value ? 'rgba(0, 229, 255, 0.1)' : 'transparent'}
+                onMouseLeave={(e) => e.currentTarget.style.background = opt.value === value && i !== highlightedIndex ? 'rgba(0, 229, 255, 0.1)' : 'transparent'}
               >
                 <span>{opt.label}</span>
                 {opt.value === value && <Check size={16} style={{ color: 'var(--p3r-cyan)' }} />}
