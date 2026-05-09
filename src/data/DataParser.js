@@ -18,7 +18,7 @@ for (const [key, row] of Object.entries(skillDataRaw)) {
     target,
     rank,
     id: key,
-    cost: row.b[1],
+    cost: row.b[1] >= 1000 ? row.b[1] % 1000 : row.b[1],
     power: row.b[2],
     hits: [row.b[3], row.b[4]],
     accuracy: row.b[5],

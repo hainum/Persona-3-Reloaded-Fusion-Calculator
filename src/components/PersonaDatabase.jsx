@@ -24,9 +24,72 @@ const RESIST_LABELS = {
   't': 'Resist', 'T': 'Resist',
 };
 
+const FMT_DESC = {
+  FMTAilmentBoost: (s) => `${s.statusEffect} chance up`,
+  FMTAutoSkill: (s) => `Auto ${s.statusEffect} at battle start`,
+  FMTBase: (s) => {
+    if (s.elem === 'rec') {
+      const what = (s.statusEffect || 'HP').replace(/ restore/i, '');
+      return `Restore ${s.power} ${what} to ${s.target}`;
+    }
+    return `${s.power} ${ELEM_LABELS[s.elem] || s.elem.toUpperCase()} dmg to ${s.target}`;
+  },
+  FMTCureAilment: (s) => `Cure ${s.statusEffect} of all allies`,
+  FMTDodgeElem: (s) => `${s.statusEffect} dodge rate up`,
+  FMTDrainElem: (s) => `Drain ${s.statusEffect}`,
+  FMTElemBoost: (s) => `${s.statusEffect} dmg dealt ${s.rank >= 6 ? 'x2.0' : 'x1.5'}`,
+  FMTElemBreak: (s) => `${s.statusEffect} resistance down for 3 turns`,
+  FMTElemCharge: (s) => `Next ${s.statusEffect} dmg x2.5`,
+  FMTElemKarn: (s) => `Reflect ${s.statusEffect} dmg once`,
+  FMTEndure: () => 'Survive fatal blow with 1 HP',
+  FMTEnduringSoul: () => 'Survive fatal blow, fully restore HP',
+  FMTExact: (s) => {
+    const label = ELEM_LABELS[s.elem] || s.elem.toUpperCase();
+    let desc = `${s.power} ${label} dmg to ${s.target}`;
+    if (s.statusEffect && s.ailmentChance > 0) desc += ` (${s.ailmentChance}% ${s.statusEffect})`;
+    else if (s.statusEffect) desc += ` (${s.statusEffect})`;
+    return desc;
+  },
+  FMTFoulBreathN: () => 'Increase foe ailment susceptibility for 3 turns',
+  FMTFracDamage: (s) => `Reduce ${s.target} HP by 1/2`,
+  FMTGrowthN: (s) => `Earn ${s.ailmentChance}% exp when not in battle`,
+  FMTHealBoost: () => 'Healing effects +50%',
+  FMTInstakillWhen: (s) => `Instakill foes with ${s.statusEffect}`,
+  FMTInvigorateN: (s) => `Restore ${s.ailmentChance} SP each turn`,
+  FMTLifeAidN: (s) => `Restore ${s.ailmentChance}% HP/SP after battle`,
+  FMTNullAilment: (s) => `Null ${s.statusEffect}`,
+  FMTNullElem: (s) => `Null ${s.statusEffect}`,
+  FMTPersonaCounterN: (s) => `${s.ailmentChance}% chance to counter phys dmg`,
+  FMTPersonaKaja: (s) => `Raise ${s.statusEffect} of all allies for 3 turns`,
+  FMTPersonaLifeDrainN: (s) => `Drain ${s.statusEffect} from foe`,
+  FMTPlus: (s) => {
+    const label = s.statusEffect.replace(/^[a-z]/, (c) => c.toUpperCase());
+    return `${label} +${s.ailmentChance}%`;
+  },
+  FMTRecarm: (s) => `Revive ally with ${s.power}% HP`,
+  FMTRegenerateN: (s) => `Restore ${s.ailmentChance}% HP each turn`,
+  FMTRepelElem: (s) => `Repel ${s.statusEffect}`,
+  FMTResistAilment: (s) => `Resist ${s.statusEffect}`,
+  FMTResistElem: (s) => `Resist ${s.statusEffect}`,
+  FMTTimes: (s) => `${s.statusEffect} up`,
+};
+
 function getEffect(skill) {
   const { elem, target, power, statusEffect, effectDesc, ailmentChance } = skill;
-  if (effectDesc && effectDesc !== '-' && !/^FMT|\$/.test(effectDesc) && effectDesc.length > 3) {
+
+  if (effectDesc && FMT_DESC[effectDesc]) {
+    return FMT_DESC[effectDesc](skill);
+  }
+
+  if (effectDesc && effectDesc.includes('$')) {
+    let desc = effectDesc;
+    if (power) desc = desc.replace('$1', power);
+    if (statusEffect) desc = desc.replace('$2', statusEffect);
+    desc = desc.replace(/\$[12]/g, '?');
+    return desc;
+  }
+
+  if (effectDesc && effectDesc !== '-' && effectDesc.length > 3) {
     return effectDesc;
   }
   const elemLabel = ELEM_LABELS[elem] || elem.toUpperCase();

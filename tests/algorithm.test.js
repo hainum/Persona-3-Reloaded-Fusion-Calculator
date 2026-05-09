@@ -30,7 +30,7 @@ for (const [key, row] of Object.entries(skillDataRaw)) {
   const elem = row.a[1];
   const target = row.a[2];
   const rank = row.b[0] || 99;
-  skillData[name] = { name, elem, target, rank, id: key, cost: row.b[1] };
+  skillData[name] = { name, elem, target, rank, id: key, cost: row.b[1] >= 1000 ? row.b[1] % 1000 : row.b[1] };
 }
 
 const personaData = {};
