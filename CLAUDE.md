@@ -12,10 +12,11 @@
 - **Every feature must include automated tests.** No exceptions.
 - **Terminal-first testing flow:**
   1. `npm run lint` — fix all lint errors
-  2. `npm test` — run algorithm tests (plain Node.js, no test runner)
+  2. `npm test` — runs `node tests/run.js`, which forks `algorithm.test.js` + `bookmark.test.js`
   3. `npm run build` — verify production build succeeds
 - **Browser verification is the LAST step.** After terminal checks pass, run `npm run dev` and test interactively.
 - When modifying algorithms or data parsing, write or update test cases in `tests/algorithm.test.js` before touching UI code.
+- When modifying BookmarkManager, update `tests/bookmark.test.js`.
 
 ## UI Guidelines
 

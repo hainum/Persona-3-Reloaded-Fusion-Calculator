@@ -20,26 +20,24 @@ This document describes the architecture, conventions, and decision rationale fo
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                     App.jsx                         │
-│            (state, orchestration, layout)            │
-│                                                     │
-│  ┌─────────────────┐    ┌────────────────────────┐  │
-│  │ SearchableSelect │    │   FusionPathViewer      │  │
-│  │   (UI input)     │    │   (recursive tree view) │  │
-│  └────────┬────────┘    └────────────┬───────────┘  │
-│           │                          │              │
-│           ▼                          ▲              │
-│  ┌─────────────────────────────────────────────┐    │
-│  │          FusionCalculator.js                 │    │
-│  │  (precomputation + backward-chaining search) │    │
-│  └────────────────────┬────────────────────────┘    │
-│                       │                              │
-│           ┌───────────▼──────────┐                   │
-│           │    DataParser.js      │                   │
-│           │ (JSON → runtime maps) │                   │
-│           └──────────────────────┘                   │
-└─────────────────────────────────────────────────────┘
+                    App.jsx
+           (state, orchestration, layout)
+              |                    |
+     ┌────────┴────────┐  ┌───────┴────────┐
+     │ SearchableSelect │  │ PersonaDatabase  │
+     │  (UI input)      │  │ (tables, detail) │
+     └────────┬────────┘  └───────┬────────┘
+              │                   │
+              ▼                   ▼
+     ┌──────────────────────────────────────┐
+     │      FusionCalculator.js              │
+     │ (precomputation + backward-chaining)  │
+     └────────────────┬─────────────────────┘
+                      │
+              ┌───────▼────────┐
+              │  DataParser.js  │
+              │ (JSON -> maps)  │
+              └────────────────┘
 ```
 
 The app follows a **strict layered architecture**:
@@ -61,13 +59,15 @@ The app follows a **strict layered architecture**:
 - Parses all raw JSON files into normalised runtime objects.
 - Exposes `personaData`, `skillData`, `fusionChart`, `specialRecipes`, `compConfig`.
 - Exposes helper functions: `canInherit(personaName, skillElem)`, `isSkillInheritable(skillName)`.
+- Exposes `personaList` (sorted by level) and `skillLearnedBy` (reverse index: skill -> personas).
+- `skillLearnedBy` entries are sorted by display level: persona base level for innate, unlock level for learned.
 - **Do not** put algorithm logic here. This module is purely data access.
 
 ### `src/lib/FusionCalculator.js`
 
 - Contains **all** search and fusion logic.
 - Precomputes the recipe map at module load time.
-- Exports `findFusionPaths(targetPersona, targetSkills, maxDepth, currentLevel, requiredPersonaCount)` and `getAllRecipes(personaName)`.
+- Exports `findFusionPaths(targetPersona, targetSkills, maxDepth, currentLevel, requiredPersonas)` and `getAllRecipes(personaName)`, `getForwardFusions(personaName)`.
 - See [`docs/SEARCH_ALGORITHM.md`](./docs/SEARCH_ALGORITHM.md) for detailed algorithm documentation.
 
 ### `src/lib/BookmarkManager.js`
@@ -81,17 +81,27 @@ The app follows a **strict layered architecture**:
 - Owns all top-level state (target persona, skills, paths, level, calculation status).
 - Orchestrates the calculation via `setTimeout` to avoid blocking the UI thread.
 - Renders the two-column layout: configuration sidebar + results main area.
+- Contains `RequiredPersonaSearch` inline component for the "Include Personas" filter.
 
 ### `src/components/SearchableSelect.jsx`
 
-- Reusable dropdown with search filtering, keyboard-accessible.
+- Reusable dropdown with search filtering, keyboard-accessible (arrow keys, Enter, Escape).
 - Controlled component: receives `value`, `onChange`, `options`.
+- Auto-selects single result on Enter press.
 
 ### `src/components/FusionPathViewer.jsx`
 
 - Renders an array of fusion path trees.
 - Uses a recursive `TreeNode` component that draws connecting lines via absolute-positioned divs.
 - Distinguishes innate skills (green, "Learns") from inherited skills (yellow, "Inherits").
+
+### `src/components/PersonaDatabase.jsx`
+
+- Two-tab view: Persona list and Skill list, both sortable and searchable.
+- Persona detail view: resistances, innate skills table, learned skills table (sorted by level), reverse/forward fusion recipes.
+- Skill detail shows effect description, cost, minimum level, learned-by personas (with level), bookmark CTAs.
+- Contains the `getEffect` function that decodes FMT template skill descriptions using the `FMT_DESC` map.
+- Owns internal state for search terms, sort columns, selected persona, skill tab.
 
 ### `src/components/BookmarkDrawer.jsx`
 
@@ -115,22 +125,22 @@ User selects persona + skills
 App.handleCalculate()
          │
          ▼  (setTimeout 100ms — non-blocking)
-findFusionPaths(persona, skills, depth, level, count)
+findFusionPaths(persona, skills, depth, level, personas)
          │
          ├─▶ Validates inheritance compatibility
          ├─▶ searchTree() — recursive backward-chaining
-         ├─▶ Filters by persona count (if set)
+         ├─▶ Filters by required personas (if set)
          └─▶ Sorts by level achievability
          │
          ▼
-App sets paths state → FusionPathViewer renders trees
+App sets paths state -> FusionPathViewer renders trees
 ```
 
 ---
 
 ## State Management
 
-All state lives in `App.jsx` via `useState` hooks. There is no external state library.
+All top-level state lives in `App.jsx` via `useState` hooks. There is no external state library.
 
 | State | Type | Persistence |
 |---|---|---|---|
@@ -144,6 +154,8 @@ All state lives in `App.jsx` via `useState` hooks. There is no external state li
 | `bookmarks` | `Bookmark[]` | `localStorage('p3r_bookmarks')` |
 | `bookmarkDrawerOpen` | `boolean` | None |
 | `saveBookmarkConfig` | `{ ... } \| null` | None |
+
+**PersonaDatabase internal state:** search terms, sort columns, selected persona, skill tab — all local `useState`.
 
 **Bookmark shape:** `{ id, name, targetPersona, targetSkills[], requiredPersonas[], createdAt }`
 
@@ -182,7 +194,7 @@ This is the core heuristic. By exploring low-level ingredient recipes first, the
 
 ### Why limit to 5 paths per state?
 
-The combinatorial explosion of skill distributions (`k^m`) × recipe count × depth makes unbounded collection infeasible. 5 paths per sub-problem keeps memory and time bounded while still providing variety in final results.
+The combinatorial explosion of skill distributions (`k^m`) x recipe count x depth makes unbounded collection infeasible. 5 paths per sub-problem keeps memory and time bounded while still providing variety in final results.
 
 ---
 
@@ -208,7 +220,7 @@ When adding a new configuration option to the sidebar:
 
 ## Known Constraints & Gotchas
 
-1. **Module-load cost** — The recipe map precomputation (~45k pair evaluations) runs synchronously at import time. This takes ~1–2 seconds on first load. Do not add more O(n²) work to module scope without profiling.
+1. **Module-load cost** — The recipe map precomputation (~45k pair evaluations) runs synchronously at import time. This takes ~1-2 seconds on first load. Do not add more O(n^2) work to module scope without profiling.
 
 2. **`searchTree` mutates the `requiredSkills` array** — It calls `.sort()` on the array for the memo key. If you ever need the original order preserved after calling `searchTree`, pass a copy.
 
@@ -216,6 +228,10 @@ When adding a new configuration option to the sidebar:
 
 4. **Special Personas in normal fusion** — Special-recipe Personas are excluded as *results* of normal fusions but can appear as *ingredients*. This is intentional and matches game behaviour.
 
-5. **Skill unlock levels** — In `demon-data.json`, skill unlock levels < 1 (e.g. 0.1, 0.2) indicate innate skills. The `FusionPathViewer` displays these as "Base" rather than showing the raw decimal.
+5. **Skill unlock levels** — In `demon-data.json`, skill unlock levels < 1 (e.g. 0.1, 0.2) indicate innate skills. The `FusionPathViewer` displays these as "Base" and the Persona detail view shows them in a dedicated Innate Skills table.
 
 6. **No Web Worker** — The search runs on the main thread. At depth 4+ with many target skills, the UI may freeze for several seconds. A Web Worker migration is the recommended fix if this becomes a user pain point.
+
+7. **SkillLearnedBy sorting** — Entries are sorted by display level. For innate skills (level < 1), the persona's base level is used as the sort key; for level-up skills, the unlock level is used.
+
+8. **FMT description templates** — Skill descriptions use an `FMT_DESC` map in `PersonaDatabase.jsx`. `FMTBase` with `power === 0` (status-cure skills) renders just the status effect description. `FMTRecarm` reads the HP percentage from `ailmentChance` (b[7]), not `power` (b[2]).
