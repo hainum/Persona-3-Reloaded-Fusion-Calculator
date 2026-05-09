@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { personaData, skillData, personaList, skillLearnedBy, compConfig } from '../data/DataParser';
 import { getAllRecipes, getForwardFusions } from '../lib/FusionCalculator';
-import { Search, List, ShieldQuestion, ArrowUpDown, ArrowLeft, Star } from 'lucide-react';
+import { Search, List, ShieldQuestion, ArrowUpDown, ArrowLeft, Star, BookmarkPlus, Plus } from 'lucide-react';
+import { SaveBookmarkModal, AddSkillToBookmarkModal } from './BookmarkModal';
 
 const ELEM_LABELS = {
   phy: 'Phys', sla: 'Slash', str: 'Strike', pie: 'Pierce',
@@ -62,7 +63,7 @@ function createSortableColumn(label, key, compareFn) {
   return { label, key, compareFn };
 }
 
-function PersonaDetail({ personaName, onBack }) {
+function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
   const pData = personaData[personaName];
 
   const learnedSkills = useMemo(() => {
@@ -106,12 +107,12 @@ function PersonaDetail({ personaName, onBack }) {
   const forwardFusions = getForwardFusions(personaName);
 
   return (
-      <div className="flex-col gap-6">
-        <button className="flex items-center gap-2" onClick={onBack} style={{ alignSelf: 'flex-start', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', padding: '6px 14px' }}>
-          <ArrowLeft size={16} /> Back to Persona List
-        </button>
+    <div className="flex-col gap-6">
+      <button className="flex items-center gap-2" onClick={onBack} style={{ alignSelf: 'flex-start', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', padding: '6px 14px' }}>
+        <ArrowLeft size={16} /> Back to Persona List
+      </button>
 
-        <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)' }}>
           <div className="flex justify-between items-center">
             <div>
@@ -120,7 +121,15 @@ function PersonaDetail({ personaName, onBack }) {
                 Lv {pData.lvl} {'\u00b7'} {pData.race}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                className="icon-btn flex items-center gap-1"
+                onClick={() => onBookmarkConfig({ initialPersona: personaName })}
+                title="Save as bookmark"
+                style={{ fontSize: '0.85rem', padding: '6px 12px', border: '1px solid var(--glass-border)' }}
+              >
+                <BookmarkPlus size={14} /> Bookmark
+              </button>
               {innateSkills.length > 0 && (
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--p3r-text-muted)' }}>Innate Skills</span>
@@ -186,6 +195,7 @@ function PersonaDetail({ personaName, onBack }) {
                 <tr>
                   <th colSpan={2}>Ingredients</th>
                   <th>Type</th>
+                  <th style={{ width: '50px' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -205,6 +215,15 @@ function PersonaDetail({ personaName, onBack }) {
                       </div>
                     </td>
                     <td>{r.isSpecial ? <span className="elem-badge" style={{ background: 'rgba(255, 193, 7, 0.15)', color: '#ffd54f', borderColor: 'rgba(255, 193, 7, 0.3)' }}>Special</span> : <span className="elem-badge">Normal</span>}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        className="icon-btn"
+                        onClick={() => onBookmarkConfig({ initialPersona: personaName, initialRequiredPersonas: r.ingredients })}
+                        title="Save as bookmark"
+                      >
+                        <BookmarkPlus size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -223,6 +242,7 @@ function PersonaDetail({ personaName, onBack }) {
                   <th>Formula</th>
                   <th>Result</th>
                   <th>Type</th>
+                  <th style={{ width: '50px' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -244,6 +264,15 @@ function PersonaDetail({ personaName, onBack }) {
                       </td>
                       <td><span className="learner-tag" style={{ color: 'var(--p3r-white)' }}>{f.result} {resultData ? `(Lv ${resultData.lvl})` : ''}</span></td>
                       <td>{f.isSpecial ? <span className="elem-badge" style={{ background: 'rgba(255, 193, 7, 0.15)', color: '#ffd54f', borderColor: 'rgba(255, 193, 7, 0.3)' }}>Special</span> : <span className="elem-badge">Normal</span>}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          className="icon-btn"
+                          onClick={() => onBookmarkConfig({ initialPersona: f.result, initialRequiredPersonas: [personaName, ...f.otherIngredients] })}
+                          title="Save as bookmark"
+                        >
+                          <BookmarkPlus size={14} />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -258,13 +287,31 @@ function PersonaDetail({ personaName, onBack }) {
   );
 }
 
-export default function PersonaDatabase() {
+export default function PersonaDatabase({ bookmarks = [], personaOptions = [], skillOptions = [], onSaveBookmark, onAddSkillToBookmark }) {
   const [tab, setTab] = useState('personas');
   const [selectedPersona, setSelectedPersona] = useState(null);
   const [personaSearch, setPersonaSearch] = useState('');
   const [skillSearch, setSkillSearch] = useState('');
   const [personaSort, setPersonaSort] = useState({ key: 'lvl', asc: true });
   const [skillSort, setSkillSort] = useState({ key: 'name', asc: true });
+  const [saveBmConfig, setSaveBmConfig] = useState(null);
+  const [addSkillName, setAddSkillName] = useState(null);
+
+  const dbPersonaOptions = useMemo(() => {
+    if (personaOptions.length > 0) return personaOptions;
+    return Object.keys(personaData).sort().map(name => ({
+      value: name,
+      label: `${name} (Lv ${personaData[name].lvl} ${personaData[name].race})`
+    }));
+  }, [personaOptions]);
+
+  const dbSkillOptions = useMemo(() => {
+    if (skillOptions.length > 0) return skillOptions;
+    return Object.keys(skillData).sort().map(name => ({
+      value: name,
+      label: `${name} (${skillData[name].elem})`
+    }));
+  }, [skillOptions]);
 
   const personaColumns = useMemo(() => [
     createSortableColumn('Name', 'name', (a, b, asc) => asc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)),
@@ -314,135 +361,185 @@ export default function PersonaDatabase() {
 
   if (selectedPersona && tab === 'personas') {
     return (
-      <div className="flex-col gap-4">
-        <div className="tab-bar flex gap-2" style={{ marginBottom: '1rem' }}>
-          <button className={`tab-btn ${tab === 'personas' ? 'active' : ''}`} onClick={() => { setTab('personas'); setSelectedPersona(null); }}><List size={16} /> Persona List</button>
-          <button className={`tab-btn ${tab === 'skills' ? 'active' : ''}`} onClick={() => setTab('skills')}><ShieldQuestion size={16} /> Skill List</button>
+      <>
+        <div className="flex-col gap-4">
+          <div className="tab-bar flex gap-2" style={{ marginBottom: '1rem' }}>
+            <button className={`tab-btn ${tab === 'personas' ? 'active' : ''}`} onClick={() => { setTab('personas'); setSelectedPersona(null); }}><List size={16} /> Persona List</button>
+            <button className={`tab-btn ${tab === 'skills' ? 'active' : ''}`} onClick={() => setTab('skills')}><ShieldQuestion size={16} /> Skill List</button>
+          </div>
+          <PersonaDetail personaName={selectedPersona} onBack={() => setSelectedPersona(null)} onBookmarkConfig={(config) => setSaveBmConfig(config)} />
         </div>
-        <PersonaDetail personaName={selectedPersona} onBack={() => setSelectedPersona(null)} />
-      </div>
+        {saveBmConfig && (
+          <SaveBookmarkModal
+            {...saveBmConfig}
+            personaOptions={dbPersonaOptions}
+            skillOptions={dbSkillOptions}
+            onSave={onSaveBookmark}
+            onClose={() => setSaveBmConfig(null)}
+          />
+        )}
+      </>
     );
   }
 
   return (
-    <div className="flex-col gap-4">
-      <div className="tab-bar flex gap-2" style={{ marginBottom: '1rem' }}>
-        <button className={`tab-btn ${tab === 'personas' ? 'active' : ''}`} onClick={() => setTab('personas')}><List size={16} /> Persona List</button>
-        <button className={`tab-btn ${tab === 'skills' ? 'active' : ''}`} onClick={() => setTab('skills')}><ShieldQuestion size={16} /> Skill List</button>
-      </div>
+    <>
+      <div className="flex-col gap-4">
+        <div className="tab-bar flex gap-2" style={{ marginBottom: '1rem' }}>
+          <button className={`tab-btn ${tab === 'personas' ? 'active' : ''}`} onClick={() => setTab('personas')}><List size={16} /> Persona List</button>
+          <button className={`tab-btn ${tab === 'skills' ? 'active' : ''}`} onClick={() => setTab('skills')}><ShieldQuestion size={16} /> Skill List</button>
+        </div>
 
-      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
-        {tab === 'personas' ? (
-          <>
-            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
-              <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
-                <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
-                <input
-                  type="text"
-                  placeholder="Search by name or arcana..."
-                  value={personaSearch}
-                  onChange={e => setPersonaSearch(e.target.value)}
-                  style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
-                />
-                <span style={{ color: 'var(--p3r-text-muted)', fontSize: '0.85rem', flexShrink: 0 }}>{filteredPersonas.length} personas</span>
+        <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+          {tab === 'personas' ? (
+            <>
+              <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
+                <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
+                  <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
+                  <input
+                    type="text"
+                    placeholder="Search by name or arcana..."
+                    value={personaSearch}
+                    onChange={e => setPersonaSearch(e.target.value)}
+                    style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
+                  />
+                  <span style={{ color: 'var(--p3r-text-muted)', fontSize: '0.85rem', flexShrink: 0 }}>{filteredPersonas.length} personas</span>
+                </div>
               </div>
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    {personaColumns.map(col => (
-                      <th key={col.key} onClick={() => handleSort(setPersonaSort)(col)} style={{ cursor: 'pointer' }}>
-                        <span className="flex items-center gap-1">
-                          {col.label}
-                          <ArrowUpDown size={12} style={{ opacity: personaSort.key === col.key ? 1 : 0.3 }} />
-                        </span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPersonas.map(p => (
-                    <tr key={p.name} onClick={() => setSelectedPersona(p.name)} style={{ cursor: 'pointer' }}>
-                      <td><strong>{p.name}</strong></td>
-                      <td>{p.lvl}</td>
-                      <td>{p.race}</td>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      {personaColumns.map(col => (
+                        <th key={col.key} onClick={() => handleSort(setPersonaSort)(col)} style={{ cursor: 'pointer' }}>
+                          <span className="flex items-center gap-1">
+                            {col.label}
+                            <ArrowUpDown size={12} style={{ opacity: personaSort.key === col.key ? 1 : 0.3 }} />
+                          </span>
+                        </th>
+                      ))}
+                      <th style={{ width: '50px' }}></th>
                     </tr>
-                  ))}
-                  {filteredPersonas.length === 0 && (
-                    <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--p3r-text-muted)', padding: '2rem' }}>No personas match your search.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
-              <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
-                <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
-                <input
-                  type="text"
-                  placeholder="Search by name, element, or effect..."
-                  value={skillSearch}
-                  onChange={e => setSkillSearch(e.target.value)}
-                  style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
-                />
-                <span style={{ color: 'var(--p3r-text-muted)', fontSize: '0.85rem', flexShrink: 0 }}>{filteredSkills.length} skills</span>
-              </div>
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    {skillColumns.map(col => (
-                      <th key={col.key} onClick={() => handleSort(setSkillSort)(col)} style={{ cursor: 'pointer' }}>
-                        <span className="flex items-center gap-1">
-                          {col.label}
-                          <ArrowUpDown size={12} style={{ opacity: skillSort.key === col.key ? 1 : 0.3 }} />
-                        </span>
-                      </th>
-                    ))}
-                    <th>Effect</th>
-                    <th>Cost</th>
-                    <th>Learned By</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSkills.map(s => {
-                    const learners = skillLearnedBy[s.name];
-                    return (
-                      <tr key={s.name}>
-                        <td><strong>{s.name}</strong></td>
-                        <td><span className="elem-badge">{ELEM_LABELS[s.elem] || s.elem.toUpperCase()}</span></td>
-                        <td style={{ maxWidth: '300px', fontSize: '0.9rem', color: 'var(--p3r-text-muted)' }}>{getEffect(s)}</td>
-                        <td>{s.cost > 0 ? `${s.cost} SP` : '\u2014'}</td>
-                        <td style={{ maxWidth: '280px', fontSize: '0.85rem' }}>
-                          {learners && learners.length > 0 ? (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                              {learners.slice(0, 3).map(l => (
-                                <span key={l.personaName} className="learner-tag">{l.personaName} (Lv{l.level})</span>
-                              ))}
-                              {learners.length > 3 && (
-                                <span className="learner-tag" style={{ opacity: 0.6 }}>+{learners.length - 3} more</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span style={{ color: 'var(--p3r-text-muted)' }}>{'\u2014'}</span>
-                          )}
+                  </thead>
+                  <tbody>
+                    {filteredPersonas.map(p => (
+                      <tr key={p.name} onClick={() => setSelectedPersona(p.name)} style={{ cursor: 'pointer' }}>
+                        <td><strong>{p.name}</strong></td>
+                        <td>{p.lvl}</td>
+                        <td>{p.race}</td>
+                        <td onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
+                          <button
+                            className="icon-btn"
+                          onClick={() => setSaveBmConfig({ initialPersona: p.name })}
+                          title="Save as bookmark"
+                          >
+                            <BookmarkPlus size={14} />
+                          </button>
                         </td>
                       </tr>
-                    );
-                  })}
-                  {filteredSkills.length === 0 && (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--p3r-text-muted)', padding: '2rem' }}>No skills match your search.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+                    ))}
+                    {filteredPersonas.length === 0 && (
+                      <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--p3r-text-muted)', padding: '2rem' }}>No personas match your search.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
+                <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
+                  <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
+                  <input
+                    type="text"
+                    placeholder="Search by name, element, or effect..."
+                    value={skillSearch}
+                    onChange={e => setSkillSearch(e.target.value)}
+                    style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
+                  />
+                  <span style={{ color: 'var(--p3r-text-muted)', fontSize: '0.85rem', flexShrink: 0 }}>{filteredSkills.length} skills</span>
+                </div>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      {skillColumns.map(col => (
+                        <th key={col.key} onClick={() => handleSort(setSkillSort)(col)} style={{ cursor: 'pointer' }}>
+                          <span className="flex items-center gap-1">
+                            {col.label}
+                            <ArrowUpDown size={12} style={{ opacity: skillSort.key === col.key ? 1 : 0.3 }} />
+                          </span>
+                        </th>
+                      ))}
+                      <th>Effect</th>
+                      <th>Cost</th>
+                      <th>Learned By</th>
+                      <th style={{ width: '50px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSkills.map(s => {
+                      const learners = skillLearnedBy[s.name];
+                      return (
+                        <tr key={s.name}>
+                          <td><strong>{s.name}</strong></td>
+                          <td><span className="elem-badge">{ELEM_LABELS[s.elem] || s.elem.toUpperCase()}</span></td>
+                          <td style={{ maxWidth: '300px', fontSize: '0.9rem', color: 'var(--p3r-text-muted)' }}>{getEffect(s)}</td>
+                          <td>{s.cost > 0 ? `${s.cost} SP` : '\u2014'}</td>
+                          <td style={{ maxWidth: '280px', fontSize: '0.85rem' }}>
+                            {learners && learners.length > 0 ? (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                                {learners.slice(0, 3).map(l => (
+                                  <span key={l.personaName} className="learner-tag">{l.personaName} (Lv{l.level})</span>
+                                ))}
+                                {learners.length > 3 && (
+                                  <span className="learner-tag" style={{ opacity: 0.6 }}>+{learners.length - 3} more</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--p3r-text-muted)' }}>{'\u2014'}</span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              className="icon-btn"
+                              onClick={() => setAddSkillName(s.name)}
+                              title="Add to bookmark"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredSkills.length === 0 && (
+                      <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--p3r-text-muted)', padding: '2rem' }}>No skills match your search.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+      {saveBmConfig && (
+        <SaveBookmarkModal
+          {...saveBmConfig}
+          personaOptions={dbPersonaOptions}
+          skillOptions={dbSkillOptions}
+          onSave={onSaveBookmark}
+          onClose={() => setSaveBmConfig(null)}
+        />
+      )}
+      {addSkillName && (
+        <AddSkillToBookmarkModal
+          skillName={addSkillName}
+          bookmarks={bookmarks}
+          onAdd={onAddSkillToBookmark}
+          onClose={() => setAddSkillName(null)}
+        />
+      )}
+    </>
   );
 }

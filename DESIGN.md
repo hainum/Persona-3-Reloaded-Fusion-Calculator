@@ -45,9 +45,9 @@ This document describes the architecture, conventions, and decision rationale fo
 The app follows a **strict layered architecture**:
 
 | Layer | Files | May Import |
-|---|---|---|
-| **UI Components** | `App.jsx`, `SearchableSelect.jsx`, `FusionPathViewer.jsx` | Data layer, Lib layer |
-| **Lib (Algorithm)** | `FusionCalculator.js` | Data layer only |
+|---|---|---|---|
+| **UI Components** | `App.jsx`, `SearchableSelect.jsx`, `FusionPathViewer.jsx`, `PersonaDatabase.jsx`, `BookmarkDrawer.jsx`, `BookmarkModal.jsx` | Data layer, Lib layer |
+| **Lib (Algorithm / Utilities)** | `FusionCalculator.js`, `BookmarkManager.js` | Data layer only |
 | **Data** | `DataParser.js`, `*.json` | Raw JSON files only |
 
 **Rule:** The algorithm layer (`lib/`) must never import from the UI layer. The data layer must never import from `lib/` or `components/`.
@@ -70,6 +70,12 @@ The app follows a **strict layered architecture**:
 - Exports `findFusionPaths(targetPersona, targetSkills, maxDepth, currentLevel, requiredPersonaCount)` and `getAllRecipes(personaName)`.
 - See [`docs/SEARCH_ALGORITHM.md`](./docs/SEARCH_ALGORITHM.md) for detailed algorithm documentation.
 
+### `src/lib/BookmarkManager.js`
+
+- Pure utility functions for bookmark CRUD and localStorage persistence.
+- Exports: `loadBookmarks()`, `saveBookmarks()`, `createBookmark(config)`, `generateBookmarkName(...)`, `findMatchingBookmark(config, bookmarks)`.
+- No React dependencies — suitable for use from any layer.
+
 ### `src/App.jsx`
 
 - Owns all top-level state (target persona, skills, paths, level, calculation status).
@@ -86,6 +92,17 @@ The app follows a **strict layered architecture**:
 - Renders an array of fusion path trees.
 - Uses a recursive `TreeNode` component that draws connecting lines via absolute-positioned divs.
 - Distinguishes innate skills (green, "Learns") from inherited skills (yellow, "Inherits").
+
+### `src/components/BookmarkDrawer.jsx`
+
+- Slide-in drawer from the right showing saved bookmarks.
+- Each bookmark entry: name, subtitle (persona + skill count), delete button.
+- Click loads the bookmark config into the calculator and switches to Calculator view.
+
+### `src/components/BookmarkModal.jsx`
+
+- Two sub-components: `SaveBookmarkModal` (create/edit bookmark with persona, skills, includes) and `AddSkillToBookmarkModal` (add a skill to an existing bookmark).
+- Used from both Calculator (save current config) and Database (persona/skill CTAs) views.
 
 ---
 
@@ -116,7 +133,7 @@ App sets paths state → FusionPathViewer renders trees
 All state lives in `App.jsx` via `useState` hooks. There is no external state library.
 
 | State | Type | Persistence |
-|---|---|---|
+|---|---|---|---|
 | `targetPersona` | `string` | None |
 | `targetSkills` | `string[8]` | None |
 | `paths` | `PathNode[] \| null` | None |
@@ -124,6 +141,11 @@ All state lives in `App.jsx` via `useState` hooks. There is no external state li
 | `searchDepth` | `number` | None |
 | `isCalculating` | `boolean` | None |
 | `currentLevel` | `number` | `localStorage('p3r_currentLevel')` |
+| `bookmarks` | `Bookmark[]` | `localStorage('p3r_bookmarks')` |
+| `bookmarkDrawerOpen` | `boolean` | None |
+| `saveBookmarkConfig` | `{ ... } \| null` | None |
+
+**Bookmark shape:** `{ id, name, targetPersona, targetSkills[], requiredPersonas[], createdAt }`
 
 **Convention:** Any new user-facing setting that should survive page reloads must be persisted to `localStorage` with a `p3r_` prefix key.
 

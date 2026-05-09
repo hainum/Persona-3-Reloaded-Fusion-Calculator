@@ -2,9 +2,12 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import SearchableSelect from './components/SearchableSelect';
 import FusionPathViewer from './components/FusionPathViewer';
 import PersonaDatabase from './components/PersonaDatabase';
+import BookmarkDrawer from './components/BookmarkDrawer';
+import { SaveBookmarkModal } from './components/BookmarkModal';
 import { personaData, skillData, isSkillInheritable } from './data/DataParser';
 import { findFusionPaths } from './lib/FusionCalculator';
-import { Settings, Zap, Search, X, Calculator, Database } from 'lucide-react';
+import { loadBookmarks, saveBookmarks, createBookmark, findMatchingBookmark } from './lib/BookmarkManager';
+import { Settings, Zap, Search, X, Calculator, Database, Bookmark, BookmarkPlus } from 'lucide-react';
 
 export default function App() {
   const [view, setView] = useState('calculator');
@@ -19,10 +22,50 @@ export default function App() {
     const saved = localStorage.getItem('p3r_currentLevel');
     return saved ? parseInt(saved, 10) : 99;
   });
+  const [bookmarks, setBookmarks] = useState(loadBookmarks);
+  const [bookmarkDrawerOpen, setBookmarkDrawerOpen] = useState(false);
+  const [saveBookmarkConfig, setSaveBookmarkConfig] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('p3r_currentLevel', currentLevel);
   }, [currentLevel]);
+
+  useEffect(() => {
+    saveBookmarks(bookmarks);
+  }, [bookmarks]);
+
+  const matchingBookmark = useMemo(() => {
+    if (view !== 'calculator') return null;
+    return findMatchingBookmark({ targetPersona, targetSkills, requiredPersonas }, bookmarks);
+  }, [view, targetPersona, targetSkills, requiredPersonas, bookmarks]);
+
+  const handleSaveBookmark = (config) => {
+    const bookmark = createBookmark(config);
+    setBookmarks(prev => [...prev, bookmark]);
+  };
+
+  const handleDeleteBookmark = (id) => {
+    setBookmarks(prev => prev.filter(b => b.id !== id));
+  };
+
+  const handleAddSkillToBookmark = (bookmarkId, skillName) => {
+    setBookmarks(prev => prev.map(b =>
+      b.id === bookmarkId && !b.targetSkills.includes(skillName)
+        ? { ...b, targetSkills: [...b.targetSkills, skillName] }
+        : b
+    ));
+  };
+
+  const handleLoadBookmark = (b) => {
+    setView('calculator');
+    setTargetPersona(b.targetPersona);
+    const skills = [...b.targetSkills];
+    while (skills.length < 8) skills.push('');
+    setTargetSkills(skills);
+    setRequiredPersonas(b.requiredPersonas);
+    setPaths(null);
+    setError(null);
+  };
 
   const personaOptions = useMemo(() => {
     return Object.keys(personaData).sort().map(name => ({
@@ -126,6 +169,13 @@ export default function App() {
           >
             <Database size={16} /> Database
           </button>
+          <button
+            className="nav-tab"
+            onClick={() => setBookmarkDrawerOpen(true)}
+            style={{ marginLeft: 'auto' }}
+          >
+            <Bookmark size={16} /> Bookmarks ({bookmarks.length})
+          </button>
         </nav>
       </header>
 
@@ -200,10 +250,33 @@ export default function App() {
             >
               {isCalculating ? 'Calculating...' : 'Calculate Paths'}
             </button>
+
+            <button
+              className="flex items-center gap-2"
+              style={{ width: '100%', justifyContent: 'center' }}
+              onClick={() => setSaveBookmarkConfig({ initialPersona: targetPersona, initialSkills: targetSkills.filter(Boolean), initialRequiredPersonas: requiredPersonas })}
+              disabled={!targetPersona}
+            >
+              <BookmarkPlus size={16} /> Save as Bookmark
+            </button>
           </aside>
 
           <main className="glass-panel" style={{ minHeight: '500px' }}>
-            <h2>Fusion Paths</h2>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0 }}>Fusion Paths</h2>
+              {matchingBookmark && (
+                <span className="bookmark-tag">
+                  <Bookmark size={14} /> {matchingBookmark.name}
+                  <span
+                    className="del"
+                    onClick={() => handleDeleteBookmark(matchingBookmark.id)}
+                    title="Delete bookmark"
+                  >
+                    <X size={14} />
+                  </span>
+                </span>
+              )}
+            </div>
             
             {error && (
               <div style={{ background: 'rgba(255, 50, 50, 0.2)', padding: '15px', borderRadius: '8px', border: '1px solid #ff4444', color: '#ffaaaa' }}>
@@ -244,7 +317,32 @@ export default function App() {
           </main>
         </div>
       ) : (
-        <PersonaDatabase />
+        <PersonaDatabase
+          bookmarks={bookmarks}
+          personaOptions={personaOptions}
+          skillOptions={skillOptions}
+          onSaveBookmark={handleSaveBookmark}
+          onDeleteBookmark={handleDeleteBookmark}
+          onAddSkillToBookmark={handleAddSkillToBookmark}
+        />
+      )}
+
+      <BookmarkDrawer
+        bookmarks={bookmarks}
+        isOpen={bookmarkDrawerOpen}
+        onClose={() => setBookmarkDrawerOpen(false)}
+        onLoad={handleLoadBookmark}
+        onDelete={handleDeleteBookmark}
+      />
+
+      {saveBookmarkConfig && (
+        <SaveBookmarkModal
+          {...saveBookmarkConfig}
+          personaOptions={personaOptions}
+          skillOptions={skillOptions}
+          onSave={handleSaveBookmark}
+          onClose={() => setSaveBookmarkConfig(null)}
+        />
       )}
     </div>
   );
