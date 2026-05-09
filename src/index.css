@@ -305,6 +305,11 @@ button:disabled {
   pointer-events: all;
 }
 .modal-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 201;
   background: var(--p3r-blue);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
