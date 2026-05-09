@@ -30,7 +30,14 @@ for (const [key, row] of Object.entries(skillDataRaw)) {
   const elem = row.a[1];
   const target = row.a[2];
   const rank = row.b[0] || 99;
-  skillData[name] = { name, elem, target, rank, id: key, cost: row.b[1] >= 1000 ? row.b[1] % 1000 : row.b[1] };
+  skillData[name] = {
+    name, elem, target, rank, id: key,
+    cost: row.b[1] >= 1000 ? row.b[1] % 1000 : row.b[1],
+    power: row.b[2],
+    statusEffect: row.c[0] === '-' ? null : row.c[0],
+    effectDesc: row.c[1] === '-' ? null : row.c[1],
+    ailmentChance: row.b[7],
+  };
 }
 
 const personaData = {};
@@ -63,6 +70,130 @@ function isSkillInheritable(skillName) {
   const skill = skillData[skillName];
   if (!skill) return false;
   return skill.rank < 99;
+}
+
+// ── Replicate effect description logic ───────────────────────────
+
+const ELEM_LABELS = {
+  phy: 'Phys', sla: 'Slash', str: 'Strike', pie: 'Pierce',
+  fir: 'Fire', ice: 'Ice', ele: 'Electric', win: 'Wind',
+  lig: 'Light', dar: 'Dark', alm: 'Almighty',
+  rec: 'Recovery', sup: 'Support', pas: 'Passive', nai: 'Auto',
+  ail: 'Ailment', spe: 'Special', uni: 'Unique',
+};
+
+const FMT_DESC = {
+  FMTAilmentBoost: (s) => `${s.statusEffect} chance up`,
+  FMTAutoSkill: (s) => `Auto ${s.statusEffect} at battle start`,
+  FMTBase: (s) => {
+    if (s.elem === 'rec') {
+      const what = (s.statusEffect || 'HP').replace(/ restore/i, '');
+      return `Restore ${s.power} ${what} to ${s.target}`;
+    }
+    return `${s.power} ${ELEM_LABELS[s.elem] || s.elem.toUpperCase()} dmg to ${s.target}`;
+  },
+  FMTCureAilment: (s) => `Cure ${s.statusEffect} of all allies`,
+  FMTDodgeElem: (s) => `${s.statusEffect} dodge rate up`,
+  FMTDrainElem: (s) => `Drain ${s.statusEffect}`,
+  FMTElemBoost: (s) => {
+    const mult = ((s.ailmentChance || 1125) - 1000) / 100;
+    const display = mult % 1 === 0 ? String(mult) : mult.toFixed(2);
+    return `${s.statusEffect} dmg dealt x${display}`;
+  },
+  FMTElemBreak: (s) => `${s.statusEffect} resistance down for 3 turns`,
+  FMTElemCharge: (s) => `Next ${s.statusEffect} dmg x2.5`,
+  FMTElemKarn: (s) => `Reflect ${s.statusEffect} dmg once`,
+  FMTEndure: () => 'Survive fatal blow with 1 HP',
+  FMTEnduringSoul: () => 'Survive fatal blow, fully restore HP',
+  FMTExact: (s) => {
+    const label = ELEM_LABELS[s.elem] || s.elem.toUpperCase();
+    let desc = `${s.power} ${label} dmg to ${s.target}`;
+    if (s.statusEffect && s.ailmentChance > 0) desc += ` (${s.ailmentChance}% ${s.statusEffect})`;
+    else if (s.statusEffect) desc += ` (${s.statusEffect})`;
+    return desc;
+  },
+  FMTFoulBreathN: () => 'Increase foe ailment susceptibility for 3 turns',
+  FMTFracDamage: (s) => `Reduce ${s.target} HP by 1/2`,
+  FMTGrowthN: (s) => `Earn ${s.ailmentChance}% exp when not in battle`,
+  FMTHealBoost: () => 'Healing effects +50%',
+  FMTInstakillWhen: (s) => `Instakill foes with ${s.statusEffect}`,
+  FMTInvigorateN: (s) => `Restore ${s.ailmentChance} SP each turn`,
+  FMTLifeAidN: (s) => `Restore ${s.ailmentChance}% HP/SP after battle`,
+  FMTNullAilment: (s) => `Null ${s.statusEffect}`,
+  FMTNullElem: (s) => `Null ${s.statusEffect}`,
+  FMTPersonaCounterN: (s) => `${s.ailmentChance}% chance to counter phys dmg`,
+  FMTPersonaKaja: (s) => `Raise ${s.statusEffect} of all allies for 3 turns`,
+  FMTPersonaLifeDrainN: (s) => `Drain ${s.statusEffect} from foe`,
+  FMTPlus: (s) => {
+    const label = s.statusEffect.replace(/^[a-z]/, (c) => c.toUpperCase());
+    return `${label} +${s.ailmentChance}%`;
+  },
+  FMTRecarm: (s) => `Revive ally with ${s.ailmentChance}% HP`,
+  FMTRegenerateN: (s) => `Restore ${s.ailmentChance}% HP each turn`,
+  FMTRepelElem: (s) => `Repel ${s.statusEffect}`,
+  FMTResistAilment: (s) => `Resist ${s.statusEffect}`,
+  FMTResistElem: (s) => `Resist ${s.statusEffect}`,
+  FMTTimes: (s) => `${s.statusEffect} up`,
+};
+
+function getEffect(skill) {
+  const { elem, target, power, statusEffect, effectDesc, ailmentChance } = skill;
+
+  if (effectDesc && FMT_DESC[effectDesc]) {
+    return FMT_DESC[effectDesc](skill);
+  }
+
+  if (effectDesc && effectDesc.includes('$')) {
+    let desc = effectDesc;
+    if (power) desc = desc.replace('$1', power);
+    if (statusEffect) desc = desc.replace('$2', statusEffect);
+    desc = desc.replace(/\$[12]/g, '?');
+    return desc;
+  }
+
+  if (effectDesc && effectDesc !== '-' && effectDesc.length > 3) {
+    return effectDesc;
+  }
+  const elemLabel = ELEM_LABELS[elem] || elem.toUpperCase();
+  if (elem === 'rec') {
+    const what = statusEffect || 'HP';
+    const amt = power ? ` ${power}` : '';
+    return `Restore${amt} ${what} to ${target}`;
+  }
+  if (elem === 'sup' || elem === 'spe') {
+    if (statusEffect) return `${statusEffect} \u2014 ${target}`;
+    return `${elemLabel} \u2014 ${target}`;
+  }
+  if (elem === 'pas' || elem === 'nai') {
+    if (statusEffect) return `Passive: ${statusEffect}`;
+    return elemLabel;
+  }
+  if (elem === 'ail') {
+    if (statusEffect) return `${ailmentChance || ''}% ${statusEffect} chance on ${target}`.trimStart();
+    return `${elemLabel} on ${target}`;
+  }
+  if (elem === 'uni') return statusEffect || elemLabel;
+  if (power > 0 || ['sla', 'str', 'pie', 'fir', 'ice', 'ele', 'win', 'lig', 'dar', 'alm'].includes(elem)) {
+    const parts = [];
+    if (power > 0) parts.push(String(power));
+    parts.push(`${elemLabel} dmg to ${target}`);
+    if (statusEffect && ailmentChance > 0) parts.push(`(${ailmentChance}% ${statusEffect})`);
+    else if (statusEffect) parts.push(`(${statusEffect})`);
+    return parts.join(' ');
+  }
+  return `${elemLabel} ${target}`;
+}
+
+// Build skillLearnedBy index (including innate skills)
+const skillLearnedBy = {};
+for (const [pName, pData] of Object.entries(demonDataRaw)) {
+  for (const [sName, unlockLvl] of Object.entries(pData.skills)) {
+    if (!skillLearnedBy[sName]) skillLearnedBy[sName] = [];
+    skillLearnedBy[sName].push({ personaName: pName, level: unlockLvl });
+  }
+}
+for (const entries of Object.values(skillLearnedBy)) {
+  entries.sort((a, b) => a.level - b.level);
 }
 
 // ── Replicate FusionCalculator.js ───────────────────────────────
@@ -418,6 +549,104 @@ console.log('\n── No Skills, No Filter ──');
   const r = findFusionPaths('Jikokuten', [], 2, 99, null);
   assert(!r.error, 'No skills/no filter: no error');
   assert(r.paths.length > 0, `No skills/no filter: ${r.paths.length} recipe paths`);
+}
+
+// ── 10. SP Cost Decoding ────────────────────────────────────────
+
+console.log('\n── SP Cost Decoding ──');
+{
+  const cost = (name) => skillData[name]?.cost;
+  assert(cost('Dia') === 3, 'Dia: 3 SP');
+  assert(cost('Agi') === 3, 'Agi: 3 SP');
+  assert(cost('Bufu') === 4, 'Bufu: 4 SP');
+  assert(cost('Zio') === 4, 'Zio: 4 SP');
+  assert(cost('Garu') === 3, 'Garu: 3 SP');
+  assert(cost('Fire Break') === 12, 'Fire Break: 12 SP');
+  assert(cost('Elec Break') === 12, 'Elec Break: 12 SP');
+  assert(cost('Charge') === 30, 'Charge: 30 SP');
+  assert(cost('Megidolaon') === 50, 'Megidolaon: 50 SP');
+  assert(cost('Salvation') === 60, 'Salvation: 60 SP');
+  assert(cost('Diarahan') === 20, 'Diarahan: 20 SP');
+  assert(cost('Samarecarm') === 35, 'Samarecarm: 35 SP');
+  assert(cost('Black Viper') === 70, 'Black Viper: 70 SP');
+  assert(cost('Sinful Shell') === 66, 'Sinful Shell: 66 SP');
+  // Passive skills should have 0 cost
+  assert(cost('Elec Boost') === 0, 'Elec Boost (passive): 0 SP');
+  assert(cost('Elec Amp') === 0, 'Elec Amp (passive): 0 SP');
+  assert(cost('Elec Driver') === 0, 'Elec Driver (passive): 0 SP');
+  // Theurgy / special skills decode correctly
+  assert(cost('Cadenza') === 1, 'Cadenza (theurgy): 1 SP');
+  assert(cost('Armageddon') === 1, 'Armageddon (theurgy): 1 SP');
+}
+
+// ── 11. Skill Effect Descriptions ───────────────────────────────
+
+console.log('\n── Skill Effect Descriptions ──');
+{
+  const eff = (name) => getEffect(skillData[name]);
+
+  assert(eff('Elec Boost') === 'Elec dmg dealt x1.25', 'Elec Boost: Elec dmg dealt x1.25');
+  assert(eff('Elec Amp') === 'Elec dmg dealt x1.50', 'Elec Amp: Elec dmg dealt x1.50');
+  assert(eff('Elec Driver') === 'Elec dmg dealt x1.75', 'Elec Driver: Elec dmg dealt x1.75');
+  assert(eff('Slash Boost') === 'Slash dmg dealt x1.25', 'Slash Boost: Slash dmg dealt x1.25');
+  assert(eff('Slash Amp') === 'Slash dmg dealt x1.50', 'Slash Amp: Slash dmg dealt x1.50');
+  assert(eff('Slash Driver') === 'Slash dmg dealt x1.75', 'Slash Driver: Slash dmg dealt x1.75');
+  assert(eff('Drain Slash') === 'Drain Slash', 'Drain Slash: Drain Slash');
+  assert(eff('Null Slash') === 'Null Slash', 'Null Slash: Null Slash');
+  assert(eff('Repel Slash') === 'Repel Slash', 'Repel Slash: Repel Slash');
+  assert(eff('Resist Slash') === 'Resist Slash', 'Resist Slash: Resist Slash');
+  assert(eff('Dodge Slash') === 'Slash dodge rate up', 'Dodge Slash: Slash dodge rate up');
+  assert(eff('Recarm') === 'Revive ally with 50% HP', 'Recarm: Revive ally with 50% HP');
+  assert(eff('Samarecarm') === 'Revive ally with 100% HP', 'Samarecarm: Revive ally with 100% HP');
+  assert(eff('Poison Boost') === 'Poison chance up', 'Poison Boost: Poison chance up');
+  assert(eff('Dizzy Boost') === 'Dizzy chance up', 'Dizzy Boost: Dizzy chance up');
+  assert(eff('Dia') === 'Restore 50 HP to 1 ally', 'Dia: Restore 50 HP to 1 ally');
+  assert(eff('Diarama') === 'Restore 150 HP to 1 ally', 'Diarama: Restore 150 HP to 1 ally');
+  assert(eff('Agi') === '40 Fire dmg to 1 foe', 'Agi: 40 Fire dmg to 1 foe');
+  assert(eff('Agidyne') === '220 Fire dmg to 1 foe', 'Agidyne: 220 Fire dmg to 1 foe');
+  assert(eff('Megidolaon') === '690 Almighty dmg to All foes', 'Megidolaon: 690 Almighty dmg to All foes');
+  assert(eff('Bufu') === '40 Ice dmg to 1 foe (15% Freeze)', 'Bufu: 40 Ice dmg to 1 foe (15% Freeze)');
+}
+
+// ── 12. skillLearnedBy includes innate skills ──────────────────
+
+console.log('\n── skillLearnedBy Index ──');
+{
+  // Innate skill: should appear even though unlockLvl < 1
+  const edLearners = skillLearnedBy['Elec Driver'];
+  assert(edLearners && edLearners.some(l => l.personaName === 'Captain Kidd'),
+    'Elec Driver: found via Captain Kidd (innate)');
+
+  // Level-up skill: should still appear normally
+  const agiLearners = skillLearnedBy['Agi'];
+  assert(agiLearners && agiLearners.length > 0,
+    'Agi: has learners');
+
+  // Skill learned by many personas
+  const diaLearners = skillLearnedBy['Dia'];
+  assert(diaLearners && diaLearners.length >= 3,
+    'Dia: has 3+ learners');
+
+  // SkillLearnedBy entries sorted by level
+  if (diaLearners) {
+    for (let i = 1; i < diaLearners.length; i++) {
+      assert(diaLearners[i].level >= diaLearners[i - 1].level,
+        `Dia learners sorted by level: index ${i}`);
+    }
+  }
+
+  // Innate skill level is < 1
+  if (edLearners) {
+    for (const l of edLearners) {
+      if (l.personaName === 'Captain Kidd') {
+        assert(l.level < 1, 'Elec Driver on Captain Kidd: level < 1 (innate)');
+      }
+    }
+  }
+
+  // Non-existent skill
+  assert(!skillLearnedBy['__nonexistent__'],
+    'Non-existent skill: not in index');
 }
 
 // ── Summary ─────────────────────────────────────────────────────

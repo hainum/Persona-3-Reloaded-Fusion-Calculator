@@ -70,7 +70,7 @@ const FMT_DESC = {
     const label = s.statusEffect.replace(/^[a-z]/, (c) => c.toUpperCase());
     return `${label} +${s.ailmentChance}%`;
   },
-  FMTRecarm: (s) => `Revive ally with ${s.power}% HP`,
+  FMTRecarm: (s) => `Revive ally with ${s.ailmentChance}% HP`,
   FMTRegenerateN: (s) => `Restore ${s.ailmentChance}% HP each turn`,
   FMTRepelElem: (s) => `Repel ${s.statusEffect}`,
   FMTResistAilment: (s) => `Resist ${s.statusEffect}`,
