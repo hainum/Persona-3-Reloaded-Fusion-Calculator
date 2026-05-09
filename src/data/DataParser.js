@@ -57,14 +57,12 @@ const personaList = Object.entries(demonDataRaw)
   .map(([name, data]) => ({ name, lvl: data.lvl, race: data.race }))
   .sort((a, b) => a.lvl - b.lvl);
 
-// Reverse index: skill name → personas that learn it via leveling up (unlock level >= 1)
+// Reverse index: skill name → personas that learn it (leveling up or innate)
 const skillLearnedBy = {};
 for (const [pName, pData] of Object.entries(demonDataRaw)) {
   for (const [sName, unlockLvl] of Object.entries(pData.skills)) {
-    if (unlockLvl >= 1) {
-      if (!skillLearnedBy[sName]) skillLearnedBy[sName] = [];
-      skillLearnedBy[sName].push({ personaName: pName, level: unlockLvl });
-    }
+    if (!skillLearnedBy[sName]) skillLearnedBy[sName] = [];
+    skillLearnedBy[sName].push({ personaName: pName, level: unlockLvl });
   }
 }
 for (const entries of Object.values(skillLearnedBy)) {

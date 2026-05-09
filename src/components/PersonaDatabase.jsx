@@ -37,7 +37,11 @@ const FMT_DESC = {
   FMTCureAilment: (s) => `Cure ${s.statusEffect} of all allies`,
   FMTDodgeElem: (s) => `${s.statusEffect} dodge rate up`,
   FMTDrainElem: (s) => `Drain ${s.statusEffect}`,
-  FMTElemBoost: (s) => `${s.statusEffect} dmg dealt ${s.rank >= 6 ? 'x2.0' : 'x1.5'}`,
+  FMTElemBoost: (s) => {
+    const mult = ((s.ailmentChance || 1125) - 1000) / 100;
+    const display = mult % 1 === 0 ? String(mult) : mult.toFixed(2);
+    return `${s.statusEffect} dmg dealt x${display}`;
+  },
   FMTElemBreak: (s) => `${s.statusEffect} resistance down for 3 turns`,
   FMTElemCharge: (s) => `Next ${s.statusEffect} dmg x2.5`,
   FMTElemKarn: (s) => `Reflect ${s.statusEffect} dmg once`,
@@ -554,7 +558,7 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                             {learners && learners.length > 0 ? (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
                                 {learners.slice(0, 3).map(l => (
-                                  <span key={l.personaName} className="learner-tag">{l.personaName} (Lv{l.level})</span>
+                                  <span key={l.personaName} className="learner-tag">{l.personaName} {l.level < 1 ? '(Base)' : '(Lv' + l.level + ')'}</span>
                                 ))}
                                 {learners.length > 3 && (
                                   <span className="learner-tag" style={{ opacity: 0.6 }}>+{learners.length - 3} more</span>
