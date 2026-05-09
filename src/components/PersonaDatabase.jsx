@@ -378,7 +378,7 @@ export default function PersonaDatabase() {
           </>
         ) : (
           <>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
               <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
                 <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
                 <input
