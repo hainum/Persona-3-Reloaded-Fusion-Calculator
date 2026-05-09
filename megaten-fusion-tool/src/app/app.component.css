@@ -1,0 +1,170 @@
+/* Demon Compendium */
+body {
+  background-color: #333333;
+  color: white;
+  width: 100%;
+  margin: 0;
+}
+
+a {
+  color: #66BBFF;
+  text-decoration: none;
+}
+
+a:hover {
+  color: yellow;
+}
+
+/* Tables */
+h2 {
+  text-align: center;
+}
+
+table {
+  border-spacing: 0;
+}
+
+.list-table {
+  width: 100%;
+}
+
+.entry-table {
+  margin-left: auto;
+  margin-right: auto;
+  padding-bottom: 3em;
+}
+
+.position-sticky {
+  position: -webkit-sticky;
+  position: sticky;
+}
+
+tbody tr:nth-child(even) td {
+  background-color: #222222;
+}
+
+th, td {
+  border: solid 1px #333333;
+  border-radius: 3.5px;
+}
+
+input[type=number] {
+  color: white;
+  background-color: #111111;
+  border-radius: 3.5px;
+  border: 0;
+}
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+input[type=number] {
+    -moz-appearance:textfield;
+}
+
+button {
+  white-space: nowrap;
+}
+
+td {
+  background-color: #282828;
+}
+
+th {
+  background-color: #1b1b1b;
+}
+
+th.title, th.nav.active, th.nav.active a {
+  background-color: white;
+  color: black;
+}
+
+/* Table Sort Directions */
+th.sortable {
+  cursor: pointer;
+  white-space: nowrap;
+  background-repeat: no-repeat;
+  background-position: right;
+}
+
+th.sortable.none {
+  background-image: url(data:image/gif;base64,R0lGODlhCwALAJEAAAAAAP///y9PT////yH5BAEAAAMALAAAAAALAAsAAAIUnC2nKLnT4or00PvyrQwrPzUZshQAOw==);
+}
+
+th.sortable.asc {
+  background-image: url(data:image/gif;base64,R0lGODlhCwALAJEAAAAAAP///y9PT////yH5BAEAAAMALAAAAAALAAsAAAIRnC2nKLnT4or00Puy3rx7VQAAOw==);
+}
+
+th.sortable.desc {
+  background-image: url(data:image/gif;base64,R0lGODlhCwALAJEAAAAAAP///y9PT////yH5BAEAAAMALAAAAAALAAsAAAIPnI+py+0/hJzz0IruwjsVADs=);
+}
+
+/* Comma-separated List */
+ul.comma-list {
+  padding: 0;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul.comma-list li {
+  display: inline;
+}
+
+/* Navbar */
+th.nav {
+  height: 2em;
+  cursor: pointer;
+  background-color: #1b1b1b;
+}
+
+th.nav.external div {
+  display: table;
+  width: 100%;
+  height: 100%;
+}
+
+th.nav.external a {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+/* Resistances */
+td.resists.fr { color: orange; }
+td.resists.wk { color: red; }
+td.resists.no { color: transparent; }
+td.resists.rs { color: lightseagreen; }
+td.resists.nu { color: lightgray; }
+td.resists.rp { color: cyan; }
+td.resists.ab { color: lime; }
+
+/* Affinity Percents */
+td.affinity-10,
+td.affinity0 { color: transparent; }
+td.affinity50 { color: orange; }
+td.affinity100 { color: lightgray; }
+td.affinity500 { color: cyan; }
+td.affinity1000 { color: lime; }
+
+/* Special Demon and Skill Rows */
+tbody tr.special td {
+  background-color: #386426;
+}
+
+/* Special Demon and Skill Rows */
+div.element-icon {
+  height: 20px;
+  background-size: 20px;
+  background-repeat: no-repeat;
+  background-position: center;
+  color: transparent;
+}
+
+tbody tr.exception td, tbody tr.unique td {
+  background-color: #622323;
+}
+
+tbody tr.hidden {
+  display: none;
+}
