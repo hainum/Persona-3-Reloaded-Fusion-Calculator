@@ -169,7 +169,7 @@ function distributeSkills(skills, numBuckets) {
   return result;
 }
 
-function searchTree(personaName, requiredSkills, maxDepth, memo) {
+export function searchTree(personaName, requiredSkills, maxDepth, memo) {
   const memoKey = `${personaName}:${requiredSkills.sort().join(',')}:${maxDepth}`;
   if (memo[memoKey]) return memo[memoKey];
 
@@ -242,7 +242,7 @@ function searchTree(personaName, requiredSkills, maxDepth, memo) {
   return validPaths;
 }
 
-function getPathMaxLevel(path) {
+export function getPathMaxLevel(path) {
   let max = personaData[path.persona] ? personaData[path.persona].lvl : 0;
   for (const ingPath of path.ingredients) {
     max = Math.max(max, getPathMaxLevel(ingPath));
@@ -250,7 +250,7 @@ function getPathMaxLevel(path) {
   return max;
 }
 
-function getPathPersonaNames(path, names = new Set()) {
+export function getPathPersonaNames(path, names = new Set()) {
   names.add(path.persona);
   for (const ing of path.ingredients) {
     getPathPersonaNames(ing, names);
@@ -258,7 +258,7 @@ function getPathPersonaNames(path, names = new Set()) {
   return names;
 }
 
-function getPathNodeCount(path) {
+export function getPathNodeCount(path) {
   let count = 1;
   for (const ing of path.ingredients) {
     count += getPathNodeCount(ing);
@@ -269,7 +269,7 @@ function getPathNodeCount(path) {
 // Generate all fusion trees for a persona without skill constraints.
 // Recursively expands ingredients up to maxDepth so that the required-personas
 // filter can find personas at any level within the tree.
-function generateFusionTrees(personaName, maxDepth, memo) {
+export function generateFusionTrees(personaName, maxDepth, memo) {
   if (maxDepth <= 0) return [];
 
   const memoKey = `gen:${personaName}:${maxDepth}`;

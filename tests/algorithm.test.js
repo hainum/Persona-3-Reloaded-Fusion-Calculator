@@ -373,6 +373,13 @@ function generateFusionTrees(personaName, maxDepth, memo) {
   memo[memoKey] = results; return results;
 }
 
+function addPathMetadata(path) {
+  path._maxLevel = getPathMaxLevel(path);
+  path._nodeCount = getPathNodeCount(path);
+  return path;
+}
+
+// Accumulate unique paths across depths (mirrors the worker's approach)
 function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel = 99, requiredPersonas = null) {
   for (const skill of targetSkills) {
     if (!canInherit(targetPersona, skill)) {
@@ -380,28 +387,40 @@ function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel
     }
   }
   const memo = {};
-  let paths;
-  if (targetSkills.length === 0) {
-    paths = generateFusionTrees(targetPersona, maxDepth, memo);
-  } else {
-    paths = searchTree(targetPersona, targetSkills, maxDepth, memo);
+  const seenPathKeys = new Set();
+  const allPaths = [];
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    let pathsAtDepth;
+    if (targetSkills.length === 0) {
+      pathsAtDepth = generateFusionTrees(targetPersona, depth, memo);
+    } else {
+      pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo);
+    }
+    if (requiredPersonas && requiredPersonas.length > 0) {
+      pathsAtDepth = pathsAtDepth.filter(p => {
+        const namesInPath = getPathPersonaNames(p);
+        return requiredPersonas.every(name => namesInPath.has(name));
+      });
+    }
+    for (const p of pathsAtDepth) {
+      const key = JSON.stringify([...getPathPersonaNames(p)].sort());
+      if (!seenPathKeys.has(key)) {
+        seenPathKeys.add(key);
+        allPaths.push(addPathMetadata(p));
+      }
+    }
+    if (allPaths.length >= 5) break;
   }
-  if (requiredPersonas && requiredPersonas.length > 0) {
-    paths = paths.filter(p => {
-      const namesInPath = getPathPersonaNames(p);
-      return requiredPersonas.every(name => namesInPath.has(name));
-    });
-  }
-  paths.sort((a, b) => {
-    const maxA = getPathMaxLevel(a); const maxB = getPathMaxLevel(b);
+  allPaths.sort((a, b) => {
+    const maxA = a._maxLevel; const maxB = b._maxLevel;
     const aPossible = maxA <= currentLevel; const bPossible = maxB <= currentLevel;
     if (aPossible && !bPossible) return -1;
     if (!aPossible && bPossible) return 1;
-    const nodesA = getPathNodeCount(a); const nodesB = getPathNodeCount(b);
+    const nodesA = a._nodeCount; const nodesB = b._nodeCount;
     if (nodesA !== nodesB) return nodesA - nodesB;
     return maxA - maxB;
   });
-  return { paths, error: null };
+  return { paths: allPaths, error: null };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -547,7 +566,44 @@ console.log('\n── Depth Progression ──');
   assert(d3.paths.length >= d2.paths.length, `Depth 3 (${d3.paths.length}) >= Depth 2 (${d2.paths.length})`);
 }
 
-// ── 9. No Skills, No Filter ────────────────────────────────────
+// ── 9. Path Metadata (_maxLevel, _nodeCount) ─────────────────
+
+console.log('\n── Path Metadata ──');
+{
+  const r = findFusionPaths('Jikokuten', ['Counter'], 2, 99);
+  if (r.paths.length > 0) {
+    const p0 = r.paths[0];
+    assert(p0._maxLevel !== undefined, '_maxLevel is present');
+    assert(p0._nodeCount !== undefined, '_nodeCount is present');
+    assert(typeof p0._maxLevel === 'number' && p0._maxLevel > 0, '_maxLevel is a positive number');
+    assert(typeof p0._nodeCount === 'number' && p0._nodeCount > 0, '_nodeCount is a positive number');
+    assert(p0._maxLevel === getPathMaxLevel(p0), '_maxLevel matches getPathMaxLevel');
+    assert(p0._nodeCount === getPathNodeCount(p0), '_nodeCount matches getPathNodeCount');
+  } else {
+    assert(true, 'No paths to check metadata');
+  }
+}
+
+// ── 10. Exported Helper Functions (used by worker) ────────────
+
+console.log('\n── Exported Helpers ──');
+{
+  const r = findFusionPaths('Jikokuten', ['Counter'], 2, 99);
+  if (r.paths.length > 0) {
+    const p0 = r.paths[0];
+    const names = getPathPersonaNames(p0);
+    assert(names.size > 0, 'getPathPersonaNames returns non-empty set');
+    assert(names.has('Jikokuten'), 'getPathPersonaNames includes root persona');
+    const count = getPathNodeCount(p0);
+    assert(count > 0 && count >= names.size, 'getPathNodeCount >= distinct names');
+    const maxLvl = getPathMaxLevel(p0);
+    assert(maxLvl > 0, 'getPathMaxLevel returns positive value');
+  } else {
+    assert(true, 'No paths to test helpers');
+  }
+}
+
+// ── 11. No Skills, No Filter ───────────────────────────────────
 
 console.log('\n── No Skills, No Filter ──');
 {

@@ -5,7 +5,6 @@ import PersonaDatabase from './components/PersonaDatabase';
 import BookmarkDrawer from './components/BookmarkDrawer';
 import { SaveBookmarkModal } from './components/BookmarkModal';
 import { personaData, skillData, isSkillInheritable } from './data/DataParser';
-import { findFusionPaths } from './lib/FusionCalculator';
 import { loadBookmarks, saveBookmarks, createBookmark, findMatchingBookmark } from './lib/BookmarkManager';
 import { Zap, Search, X, Calculator, Database, Bookmark, BookmarkPlus } from 'lucide-react';
 
@@ -15,8 +14,8 @@ export default function App() {
   const [targetSkills, setTargetSkills] = useState(['', '', '', '', '', '', '', '']);
   const [paths, setPaths] = useState(null);
   const [error, setError] = useState(null);
-  const [searchDepth, setSearchDepth] = useState(2);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [currentSearchDepth, setCurrentSearchDepth] = useState(0);
   const [requiredPersonas, setRequiredPersonas] = useState([]);
   const [currentLevel, setCurrentLevel] = useState(() => {
     const saved = localStorage.getItem('p3r_currentLevel');
@@ -25,10 +24,13 @@ export default function App() {
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
   const [bookmarkDrawerOpen, setBookmarkDrawerOpen] = useState(false);
   const [saveBookmarkConfig, setSaveBookmarkConfig] = useState(null);
-  const [showFloatingDeeper, setShowFloatingDeeper] = useState(false);
-  const deeperBtnRef = useRef(null);
+  const workerRef = useRef(null);
+  const workerHealthyRef = useRef(true);
+  const currentLevelRef = useRef(currentLevel);
+  const searchTimeoutRef = useRef(null);
 
   useEffect(() => {
+    currentLevelRef.current = currentLevel;
     localStorage.setItem('p3r_currentLevel', currentLevel);
   }, [currentLevel]);
 
@@ -36,16 +38,55 @@ export default function App() {
     saveBookmarks(bookmarks);
   }, [bookmarks]);
 
+  const sortPaths = (pathsList, level) => {
+    return [...pathsList].sort((a, b) => {
+      const aPossible = a._maxLevel <= level;
+      const bPossible = b._maxLevel <= level;
+      if (aPossible && !bPossible) return -1;
+      if (!aPossible && bPossible) return 1;
+      if (a._nodeCount !== b._nodeCount) return a._nodeCount - b._nodeCount;
+      return a._maxLevel - b._maxLevel;
+    });
+  };
+
+  const createWorker = () => {
+    const w = new Worker(new URL('./workers/fusionSearch.worker.js', import.meta.url), { type: 'module' });
+    w.onmessage = (e) => {
+      const { type, payload } = e.data;
+      if (type === 'progress') {
+        setPaths(prev => prev ? [...prev, ...payload.paths] : [...payload.paths]);
+        setCurrentSearchDepth(payload.depth);
+      } else if (type === 'done') {
+        setPaths(prev => prev ?? []);
+        setIsCalculating(false);
+      } else if (type === 'error') {
+        setPaths(null);
+        setError(payload.message);
+        setIsCalculating(false);
+      }
+    };
+    w.onerror = () => {
+      workerHealthyRef.current = false;
+      setPaths(null);
+      setIsCalculating(false);
+      setError('Worker encountered an error. Please try again.');
+    };
+    return w;
+  };
+
   useEffect(() => {
-    const el = deeperBtnRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => setShowFloatingDeeper(!entry.isIntersecting),
-      { threshold: 0 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [paths]);
+    if (!workerRef.current || !workerHealthyRef.current) {
+      if (workerRef.current) workerRef.current.terminate();
+      workerRef.current = createWorker();
+      workerHealthyRef.current = true;
+    }
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
+  }, []);
 
   const matchingBookmark = useMemo(() => {
     if (view !== 'calculator') return null;
@@ -70,6 +111,7 @@ export default function App() {
   };
 
   const handleLoadBookmark = (b) => {
+    cancelSearch();
     setView('calculator');
     setTargetPersona(b.targetPersona);
     const skills = [...b.targetSkills];
@@ -79,6 +121,10 @@ export default function App() {
     setPaths(null);
     setError(null);
   };
+
+  const sortedPaths = useMemo(() => {
+    return paths ? sortPaths(paths, currentLevel) : null;
+  }, [paths, currentLevel]);
 
   const personaOptions = useMemo(() => {
     return Object.keys(personaData).sort().map(name => ({
@@ -113,26 +159,71 @@ export default function App() {
     setRequiredPersonas(requiredPersonas.filter(p => p !== name));
   };
 
-  const handleCalculate = (depth = 2) => {
-    if (!targetPersona) return;
-    setIsCalculating(true);
-    setError(null);
-    setSearchDepth(depth);
-    
-    // Simulate async calculation to avoid blocking UI immediately
-    setTimeout(() => {
-      const activeSkills = targetSkills.filter(s => s !== '');
-      const result = findFusionPaths(targetPersona, activeSkills, depth, currentLevel, requiredPersonas.length > 0 ? requiredPersonas : null);
-      
-      if (result.error) {
-        setError(result.error);
-        setPaths(null);
-      } else {
-        setPaths(result.paths);
-      }
-      setIsCalculating(false);
-    }, 100);
+  const cancelSearch = () => {
+    const w = workerRef.current;
+    if (w && workerHealthyRef.current) {
+      w.postMessage({ type: 'cancel' });
+    }
   };
+
+  useEffect(() => {
+    if (view !== 'calculator') {
+      cancelSearch();
+    }
+  }, [view]);
+
+  const handleCalculate = () => {
+    if (!targetPersona) {
+      cancelSearch();
+      setPaths(null);
+      setError(null);
+      setCurrentSearchDepth(0);
+      setIsCalculating(false);
+      return;
+    }
+    cancelSearch();
+    setPaths(null);
+    setError(null);
+    setCurrentSearchDepth(0);
+    setIsCalculating(true);
+
+    if (!workerRef.current || !workerHealthyRef.current) {
+      if (workerRef.current) workerRef.current.terminate();
+      workerRef.current = createWorker();
+      workerHealthyRef.current = true;
+    }
+    const w = workerRef.current;
+    const activeSkills = targetSkills.filter(s => s !== '');
+    w.postMessage({
+      type: 'search',
+      payload: {
+        targetPersona,
+        targetSkills: activeSkills,
+        currentLevel,
+        requiredPersonas: requiredPersonas.length > 0 ? requiredPersonas : null,
+      }
+    });
+  };
+
+  const handleCalculateRef = useRef(handleCalculate);
+  useEffect(() => {
+    handleCalculateRef.current = handleCalculate;
+  });
+
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      handleCalculateRef.current();
+    }, 200);
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [targetPersona, targetSkills, requiredPersonas]);
 
   return (
     <div className="container flex-col gap-6">
@@ -255,15 +346,6 @@ export default function App() {
               />
             </div>
 
-            <button 
-              className="primary" 
-              style={{ width: '100%', marginTop: '1rem' }}
-              onClick={() => handleCalculate(2)}
-              disabled={!targetPersona || isCalculating}
-            >
-              {isCalculating ? 'Calculating...' : 'Calculate Paths'}
-            </button>
-
             <button
               className="flex items-center gap-2"
               style={{ width: '100%', justifyContent: 'center' }}
@@ -297,52 +379,34 @@ export default function App() {
               </div>
             )}
 
-            {!error && !paths && !isCalculating && (
+            {!error && !sortedPaths && !isCalculating && (
               <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
-                Select a Target Persona and desired skills, then click Calculate to see fusion paths.
+                Select a Target Persona and desired skills to see fusion paths.
               </div>
             )}
 
             {isCalculating && (
               <div className="text-cyan" style={{ textAlign: 'center', marginTop: '4rem' }}>
-                Searching the Sea of Souls... (Depth {searchDepth})
+                Searching the Sea of Souls... 
+                {currentSearchDepth > 0 && ` (Depth ${currentSearchDepth})`}
+                {sortedPaths && <span> Found {sortedPaths.length} paths so far...</span>}
               </div>
             )}
 
-            {paths && paths.length === 0 && !isCalculating && (
+            {sortedPaths && sortedPaths.length === 0 && !isCalculating && (
               <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
-                No paths found within depth {searchDepth}. <br/><br/>
-                <button onClick={() => handleCalculate(searchDepth + 1)}>See More (Increase Depth)</button>
+                No valid paths found. Try different skills or a different target persona.
               </div>
             )}
 
-            {paths && paths.length > 0 && !isCalculating && (
+            {sortedPaths && sortedPaths.length > 0 && (
               <div>
-                <p className="text-cyan">Found {paths.length} valid paths.</p>
+                {!isCalculating && <p className="text-cyan">Found {sortedPaths.length} valid paths.</p>}
                 
-                <FusionPathViewer paths={paths} />
-
-                <div ref={deeperBtnRef} style={{ marginTop: '2rem', textAlign: 'center' }}>
-                   <button onClick={() => handleCalculate(searchDepth + 1)}>See Deeper Paths</button>
-                </div>
+                <FusionPathViewer paths={sortedPaths} />
               </div>
             )}
           </main>
-          {showFloatingDeeper && (
-            <button
-              onClick={() => handleCalculate(searchDepth + 1)}
-              title="See Deeper Paths"
-              style={{
-                position: 'fixed', bottom: '24px', right: '24px', zIndex: 100,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                width: '48px', height: '48px', borderRadius: '50%',
-                padding: 0, fontSize: '1.5rem', lineHeight: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}
-            >
-              +
-            </button>
-          )}
         </div>
       ) : (
         <PersonaDatabase

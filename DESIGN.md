@@ -124,16 +124,23 @@ User selects persona + skills
          ▼
 App.handleCalculate()
          │
-         ▼  (setTimeout 100ms — non-blocking)
-findFusionPaths(persona, skills, depth, level, personas)
-         │
-         ├─▶ Validates inheritance compatibility
-         ├─▶ searchTree() — recursive backward-chaining
-         ├─▶ Filters by required personas (if set)
-         └─▶ Sorts by level achievability
+         ├─▶ Creates/checks Web Worker (self-healing)
+         ├─▶ Cancels any in-flight search
+         ├─▶ Sends search params via postMessage
          │
          ▼
-App sets paths state -> FusionPathViewer renders trees
+fusionSearch.worker.js
+         │
+         ├─▶ Loops depth 1..MAX until exhaustion
+         ├─▶ After each depth: posts { type: 'progress', paths }
+         └─▶ When done: posts { type: 'done' }
+         │
+         ▼
+App.onmessage handler
+         │
+         ├─▶ Appends new unique paths to list
+         ├─▶ sortedPaths useMemo re-sorts by currentLevel
+         └─▶ FusionPathViewer re-renders
 ```
 
 ---
@@ -148,7 +155,7 @@ All top-level state lives in `App.jsx` via `useState` hooks. There is no externa
 | `targetSkills` | `string[8]` | None |
 | `paths` | `PathNode[] \| null` | None |
 | `error` | `string \| null` | None |
-| `searchDepth` | `number` | None |
+| `currentSearchDepth` | `number` | None |
 | `isCalculating` | `boolean` | None |
 | `currentLevel` | `number` | `localStorage('p3r_currentLevel')` |
 | `bookmarks` | `Bookmark[]` | `localStorage('p3r_bookmarks')` |
@@ -220,18 +227,22 @@ When adding a new configuration option to the sidebar:
 
 ## Known Constraints & Gotchas
 
-1. **Module-load cost** — The recipe map precomputation (~45k pair evaluations) runs synchronously at import time. This takes ~1-2 seconds on first load. Do not add more O(n^2) work to module scope without profiling.
+1. **Module-load cost** — The recipe map precomputation (~45k pair evaluations) runs synchronously at import time. This takes ~1-2 seconds on first load. The cost is incurred twice: once in the main thread (for `getAllRecipes` lookups in the UI) and once in the Web Worker (for search). Do not add more O(n^2) work to module scope without profiling.
 
 2. **`searchTree` mutates the `requiredSkills` array** — It calls `.sort()` on the array for the memo key. If you ever need the original order preserved after calling `searchTree`, pass a copy.
 
-3. **`setTimeout` for calculation** — The 100ms delay in `handleCalculate` is a workaround to let React render the "Calculating..." state before the synchronous search blocks the main thread. If search becomes async (e.g. Web Workers), remove this.
+3. **Special Personas in normal fusion** — Special-recipe Personas are excluded as *results* of normal fusions but can appear as *ingredients*. This is intentional and matches game behaviour.
 
-4. **Special Personas in normal fusion** — Special-recipe Personas are excluded as *results* of normal fusions but can appear as *ingredients*. This is intentional and matches game behaviour.
+4. **Skill unlock levels** — In `demon-data.json`, skill unlock levels < 1 (e.g. 0.1, 0.2) indicate innate skills. The `FusionPathViewer` displays these as "Base" and the Persona detail view shows them in a combined Skills table labelled "Innate".
 
-5. **Skill unlock levels** — In `demon-data.json`, skill unlock levels < 1 (e.g. 0.1, 0.2) indicate innate skills. The `FusionPathViewer` displays these as "Base" and the Persona detail view shows them in a dedicated Innate Skills table.
+5. **SkillLearnedBy sorting** — Entries are sorted by display level. For innate skills (level < 1), the persona's base level is used as the sort key; for level-up skills, the unlock level is used.
 
-6. **No Web Worker** — The search runs on the main thread. At depth 4+ with many target skills, the UI may freeze for several seconds. A Web Worker migration is the recommended fix if this becomes a user pain point.
+6. **FMT description templates** — Skill descriptions use an `FMT_DESC` map in `PersonaDatabase.jsx`. `FMTBase` with `power === 0` (status-cure skills) renders just the status effect description. `FMTRecarm` reads the HP percentage from `ailmentChance` (b[7]), not `power` (b[2]).
 
-7. **SkillLearnedBy sorting** — Entries are sorted by display level. For innate skills (level < 1), the persona's base level is used as the sort key; for level-up skills, the unlock level is used.
+7. **Web Worker lifecycle** — The worker is created once at app mount and kept alive for the component's lifetime. Worker health is tracked via `workerHealthyRef` — if the worker errors, a flag is set and the next `handleCalculate` call recreates it. The worker is terminated on unmount.
 
-8. **FMT description templates** — Skill descriptions use an `FMT_DESC` map in `PersonaDatabase.jsx`. `FMTBase` with `power === 0` (status-cure skills) renders just the status effect description. `FMTRecarm` reads the HP percentage from `ailmentChance` (b[7]), not `power` (b[2]).
+8. **Search is depth-unlimited** — The worker iterates depth from 1 upward up to `MAX_DEPTH=20`, stopping when two consecutive depths yield zero paths. There is no user-facing depth limit — the search exhausts all possible recipe combinations.
+
+9. **Paths include sort metadata** — Each path from the worker carries `_maxLevel` (highest persona level in tree) and `_nodeCount` (total nodes). The main thread uses these in a `sortedPaths` useMemo to keep the list sorted by achievability, fewest nodes, then lowest max level. The sort is re-applied whenever `currentLevel` changes.
+
+10. **Progressive path delivery** — The worker posts results after each depth iteration. The main thread appends new paths and React re-renders immediately. There is no "See Deeper Paths" button — the search continues until exhaustion while the UI stays responsive.

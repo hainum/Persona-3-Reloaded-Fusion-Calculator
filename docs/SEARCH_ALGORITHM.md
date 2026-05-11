@@ -10,8 +10,9 @@ This document describes the core algorithm in [`src/lib/FusionCalculator.js`](..
 2. [Phase 1 — Precomputation](#phase-1--precomputation)
 3. [Phase 2 — Backward-Chaining Search](#phase-2--backward-chaining-search)
 4. [Phase 3 — Post-Search Filtering & Sorting](#phase-3--post-search-filtering--sorting)
-5. [Key Data Structures](#key-data-structures)
-6. [Complexity & Limits](#complexity--limits)
+5. [Phase 4 — Web Worker Integration](#phase-4--web-worker-integration)
+6. [Key Data Structures](#key-data-structures)
+7. [Complexity & Limits](#complexity--limits)
 
 ---
 
@@ -21,7 +22,28 @@ The algorithm answers the question:
 
 > *"What fusion chains produce **Persona X** such that it ends up with skills **S₁, S₂, …, Sₙ**?"*
 
-It operates in three phases:
+All search logic runs inside a **Web Worker** (`fusionSearch.worker.js`) to keep the UI responsive. The worker imports `FusionCalculator.js` directly, performing recipe-map precomputation once at worker init.
+
+```
+Main Thread                          Worker
+───────────                          ──────
+App.jsx                              fusionSearch.worker.js
+  │  postMessage('search', params)      │
+  ├─────────────────────────────────────▶│
+  │                                      ├─▶ Phase 2 (depth loop)
+  │                                      │   After each depth:
+  │  onmessage('progress', paths)        │
+  │◀─────────────────────────────────────┤
+  │                                      ├─▶ ...next depth...
+  │                                      │
+  │  onmessage('done')                   │
+  │◀─────────────────────────────────────┤
+  │                                      │
+  └─▶ sortedPaths useMemo (re-sort)
+  └─▶ FusionPathViewer re-renders
+```
+
+It operates in four phases:
 
 ```
 ┌──────────────────┐     ┌──────────────────────┐     ┌────────────────────────┐
@@ -146,6 +168,54 @@ Paths are sorted using a two-tier comparator:
 
 ---
 
+## Phase 4 — Web Worker Integration
+
+The search no longer runs on the main thread. All depth iterations happen inside a dedicated Web Worker.
+
+### Worker Lifecycle
+
+- **Created once** at app mount in a `useEffect`, stored in `workerRef`.
+- **Self-healing**: if the worker errors, `workerHealthyRef` is set to `false`; the next `handleCalculate` call recreates it.
+- **Terminated** on component unmount.
+
+### Message Protocol
+
+| Direction | Type | Payload |
+|-----------|------|---------|
+| Main → Worker | `search` | `{ targetPersona, targetSkills, requiredPersonas }` |
+| Main → Worker | `cancel` | _(none)_ |
+| Worker → Main | `progress` | `{ depth, paths }` — new unique paths found at this depth |
+| Worker → Main | `done` | _(none)_ — all depths exhausted |
+| Worker → Main | `error` | `{ message }` — unexpected error |
+
+### Depth Iteration
+
+The worker loops depth from 1 to `MAX_DEPTH` (20) calling `searchTree()` or `generateFusionTrees()` at each level. After each depth:
+
+1. **Filter** by `requiredPersonas` if set.
+2. **Deduplicate** against all previously seen paths using `getPathPersonaNames()` — a Set keyed by sorted persona names.
+3. **Enrich** each new path with `_maxLevel` and `_nodeCount` for main-thread sorting.
+4. **Post** `progress` message with only new unique paths.
+
+The loop stops when two consecutive depths produce zero paths (exhaustion).
+
+### Main-Thread Sort
+
+Each `progress` message appends new paths to the state array. A `sortedPaths` useMemo re-sorts the entire list whenever `paths` or `currentLevel` changes:
+
+```
+sort priority:
+  1. Achievable at current level (_maxLevel ≤ currentLevel)
+  2. Fewest nodes (_nodeCount)
+  3. Lowest max level (_maxLevel)
+```
+
+### Cancel Behaviour
+
+When the main thread needs to stop a running search (user clicks Cancel, changes params, navigates to Database view), it sends `{ type: 'cancel' }`. The worker checks a `cancelled` flag at the top of each depth iteration and exits cleanly.
+
+---
+
 ## Key Data Structures
 
 ### Fusion Path Node
@@ -178,11 +248,21 @@ Each node in a returned fusion path has this shape:
 ## Complexity & Limits
 
 | Dimension | Bound |
-|---|---|
-| Recipe map construction | O(n²) where n ≈ 300 Personas (~45k pairs) |
+|---|---|---|
+| Recipe map construction | O(n²) where n ≈ 300 Personas (~45k pairs), runs once in each thread |
 | Skill distribution per recipe | O(k^m) where k = ingredients, m = remaining skills |
 | Search tree branching | Bounded by 5 paths/state × recipe count × distributions |
 | Memoisation | Prevents re-expansion of identical `(persona, skills, depth)` states |
-| Practical depth | Depth 2–3 is fast; depth 4+ may take several seconds |
+| Practical depth | Unlimited — worker iterates until two consecutive depths yield zero paths |
+| Max depth safety limit | 20 (`MAX_DEPTH` in `fusionSearch.worker.js`) |
 
 The pre-sorting of recipes by ingredient level is the primary heuristic that makes the first results returned the most useful ones, since lower-level paths are explored and recorded before higher-level alternatives.
+
+### UI Impact
+
+Because the search runs in a Web Worker:
+
+- **No main-thread blocking** — the UI stays responsive even at high depths.
+- **Progressive rendering** — paths appear as soon as each depth finishes.
+- **No "See Deeper Paths" button** — the search continues until all possibilities are explored.
+- **Path count cap removed** — all unique paths across all depths are shown.
