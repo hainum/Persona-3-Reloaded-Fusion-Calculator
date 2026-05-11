@@ -79,11 +79,20 @@ const FMT_DESC = {
   FMTTimes: (s) => `${s.statusEffect} up`,
 };
 
+function appendMultiHitStats(skill, desc) {
+  const { hits, accuracy, critRate } = skill;
+  if (hits && hits.length === 2 && hits[0] > 0 && !(hits[0] === 1 && hits[1] === 1)) {
+    const hitStr = hits[0] === hits[1] ? `${hits[0]}` : `${hits[0]}-${hits[1]}`;
+    return `${desc}, ${hitStr} hits, ${accuracy}% acc, ${critRate}% crit`;
+  }
+  return desc;
+}
+
 function getEffect(skill) {
   const { elem, target, power, statusEffect, effectDesc, ailmentChance } = skill;
 
   if (effectDesc && FMT_DESC[effectDesc]) {
-    return FMT_DESC[effectDesc](skill);
+    return appendMultiHitStats(skill, FMT_DESC[effectDesc](skill));
   }
 
   if (effectDesc && effectDesc.includes('$')) {
@@ -91,40 +100,40 @@ function getEffect(skill) {
     if (power) desc = desc.replace('$1', power);
     if (statusEffect) desc = desc.replace('$2', statusEffect);
     desc = desc.replace(/\$[12]/g, '?');
-    return desc;
+    return appendMultiHitStats(skill, desc);
   }
 
   if (effectDesc && effectDesc !== '-' && effectDesc.length > 3) {
-    return effectDesc;
+    return appendMultiHitStats(skill, effectDesc);
   }
   const elemLabel = ELEM_LABELS[elem] || elem.toUpperCase();
   if (elem === 'rec') {
     const what = statusEffect || 'HP';
     const amt = power ? ` ${power}` : '';
-    return `Restore${amt} ${what} to ${target}`;
+    return appendMultiHitStats(skill, `Restore${amt} ${what} to ${target}`);
   }
   if (elem === 'sup' || elem === 'spe') {
-    if (statusEffect) return `${statusEffect} \u2014 ${target}`;
-    return `${elemLabel} \u2014 ${target}`;
+    if (statusEffect) return appendMultiHitStats(skill, `${statusEffect} \u2014 ${target}`);
+    return appendMultiHitStats(skill, `${elemLabel} \u2014 ${target}`);
   }
   if (elem === 'pas' || elem === 'nai') {
-    if (statusEffect) return `Passive: ${statusEffect}`;
-    return elemLabel;
+    if (statusEffect) return appendMultiHitStats(skill, `Passive: ${statusEffect}`);
+    return appendMultiHitStats(skill, elemLabel);
   }
   if (elem === 'ail') {
-    if (statusEffect) return `${ailmentChance || ''}% ${statusEffect} chance on ${target}`.trimStart();
-    return `${elemLabel} on ${target}`;
+    if (statusEffect) return appendMultiHitStats(skill, `${ailmentChance || ''}% ${statusEffect} chance on ${target}`.trimStart());
+    return appendMultiHitStats(skill, `${elemLabel} on ${target}`);
   }
-  if (elem === 'uni') return statusEffect || elemLabel;
+  if (elem === 'uni') return appendMultiHitStats(skill, statusEffect || elemLabel);
   if (power > 0 || ['sla', 'str', 'pie', 'fir', 'ice', 'ele', 'win', 'lig', 'dar', 'alm'].includes(elem)) {
     const parts = [];
     if (power > 0) parts.push(String(power));
     parts.push(`${elemLabel} dmg to ${target}`);
     if (statusEffect && ailmentChance > 0) parts.push(`(${ailmentChance}% ${statusEffect})`);
     else if (statusEffect) parts.push(`(${statusEffect})`);
-    return parts.join(' ');
+    return appendMultiHitStats(skill, parts.join(' '));
   }
-  return `${elemLabel} ${target}`;
+  return appendMultiHitStats(skill, `${elemLabel} ${target}`);
 }
 
 function createSortableColumn(label, key, compareFn) {
@@ -134,21 +143,17 @@ function createSortableColumn(label, key, compareFn) {
 function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
   const pData = personaData[personaName];
 
-  const learnedSkills = useMemo(() => {
+  const skills = useMemo(() => {
     if (!pData) return [];
     return Object.entries(pData.skills)
-      .filter(([, lvl]) => lvl >= 1)
-      .sort((a, b) => a[1] - b[1])
       .map(([sName, lvl]) => ({ ...skillData[sName], learnLevel: lvl }))
-      .filter(s => s.name);
-  }, [pData]);
-
-  const innateSkills = useMemo(() => {
-    if (!pData) return [];
-    return Object.entries(pData.skills)
-      .filter(([, lvl]) => lvl < 1)
-      .map(([sName]) => ({ ...skillData[sName] }))
-      .filter(s => s.name);
+      .filter(s => s.name)
+      .sort((a, b) => {
+        const aInnate = a.learnLevel < 1 ? 0 : 1;
+        const bInnate = b.learnLevel < 1 ? 0 : 1;
+        if (aInnate !== bInnate) return aInnate - bInnate;
+        return a.learnLevel - b.learnLevel;
+      });
   }, [pData]);
 
   const resistRows = useMemo(() => {
@@ -216,35 +221,9 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
           </div>
         </div>
 
-        {innateSkills.length > 0 && (
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
-            <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Innate Skills</h3>
-            <table className="data-table" style={{ fontSize: '0.85rem' }}>
-              <thead>
-                <tr>
-                  <th>Skill</th>
-                  <th>Element</th>
-                  <th>Effect</th>
-                  <th>Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {innateSkills.map(s => (
-                  <tr key={s.name}>
-                    <td><strong>{s.name}</strong></td>
-                    <td><span className="elem-badge">{ELEM_LABELS[s.elem] || s.elem.toUpperCase()}</span></td>
-                    <td style={{ color: 'var(--p3r-text-muted)', maxWidth: '260px' }}>{getEffect(s)}</td>
-                    <td>{s.cost > 0 ? `${s.cost} SP` : '\u2014'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
-          <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Learned Skills</h3>
-          {learnedSkills.length > 0 ? (
+          <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Skills</h3>
+          {skills.length > 0 ? (
             <table className="data-table" style={{ fontSize: '0.85rem' }}>
               <thead>
                 <tr>
@@ -256,10 +235,10 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
                 </tr>
               </thead>
               <tbody>
-                {learnedSkills.map(s => (
+                {skills.map(s => (
                   <tr key={s.name}>
                     <td><strong>{s.name}</strong></td>
-                    <td>{s.learnLevel}</td>
+                    <td>{s.learnLevel < 1 ? <span className="innate-chip">Innate</span> : s.learnLevel > 99 ? <span className="theurgy-chip">Theurgy</span> : s.learnLevel}</td>
                     <td><span className="elem-badge">{ELEM_LABELS[s.elem] || s.elem.toUpperCase()}</span></td>
                     <td style={{ color: 'var(--p3r-text-muted)', maxWidth: '260px' }}>{getEffect(s)}</td>
                     <td>{s.cost > 0 ? `${s.cost} SP` : '\u2014'}</td>
@@ -268,7 +247,7 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
               </tbody>
             </table>
           ) : (
-            <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>No skills learned through leveling up.</p>
+            <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>No skills.</p>
           )}
         </div>
 
@@ -593,15 +572,19 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                           <td style={{ maxWidth: '300px', fontSize: '0.9rem', color: 'var(--p3r-text-muted)' }}>{getEffect(s)}</td>
                           <td>{s.cost > 0 ? `${s.cost} SP` : '\u2014'}</td>
                           <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>
-                            {learners ? Math.min(...learners.map(l => l.level < 1 ? (personaData[l.personaName]?.lvl ?? l.level) : l.level)) : '\u2014'}
+                            {learners ? (() => {
+                              const normalLevels = learners.map(l => l.level < 1 ? (personaData[l.personaName]?.lvl ?? l.level) : l.level).filter(l => l <= 99);
+                              return normalLevels.length > 0 ? Math.min(...normalLevels) : <span className="theurgy-chip">Special</span>;
+                            })() : '\u2014'}
                           </td>
                           <td style={{ maxWidth: '280px', fontSize: '0.85rem' }}>
                             {learners && learners.length > 0 ? (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                                {learners.map(l => {
-                                  const displayLvl = l.level < 1 ? personaData[l.personaName]?.lvl ?? l.level : l.level;
+                                  {learners.map(l => {
+                                  const isSpecial = l.level > 99;
+                                  const displayLvl = isSpecial ? <span className="theurgy-chip">Theurgy</span> : (l.level < 1 ? personaData[l.personaName]?.lvl ?? l.level : l.level);
                                   return (
-                                    <span key={l.personaName} className="learner-tag">({displayLvl}) {l.personaName}</span>
+                                    <span key={l.personaName} className="learner-tag">{typeof displayLvl === 'object' ? <>{displayLvl}</> : <>({displayLvl})</>} {l.personaName}</span>
                                   );
                                 })}
                               </div>

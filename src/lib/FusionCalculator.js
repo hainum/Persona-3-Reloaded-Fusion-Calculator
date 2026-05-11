@@ -316,24 +316,39 @@ export function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, curre
   }
 
   const memo = {};
-  let paths;
+  const seenPathKeys = new Set();
+  const allPaths = [];
 
-  if (targetSkills.length === 0) {
-    // No skill constraints — enumerate recipe-based paths
-    paths = generateFusionTrees(targetPersona, maxDepth, memo);
-  } else {
-    paths = searchTree(targetPersona, targetSkills, maxDepth, memo);
-  }
+  // Accumulate paths from depth 1 up to maxDepth so that "See Deeper Paths"
+  // keeps existing shallow paths and adds new deeper ones below them.
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    let pathsAtDepth;
+    if (targetSkills.length === 0) {
+      pathsAtDepth = generateFusionTrees(targetPersona, depth, memo);
+    } else {
+      pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo);
+    }
 
-  if (requiredPersonas && requiredPersonas.length > 0) {
-    paths = paths.filter(p => {
-      const namesInPath = getPathPersonaNames(p);
-      return requiredPersonas.every(name => namesInPath.has(name));
-    });
+    if (requiredPersonas && requiredPersonas.length > 0) {
+      pathsAtDepth = pathsAtDepth.filter(p => {
+        const namesInPath = getPathPersonaNames(p);
+        return requiredPersonas.every(name => namesInPath.has(name));
+      });
+    }
+
+    for (const p of pathsAtDepth) {
+      const key = JSON.stringify([...getPathPersonaNames(p)].sort());
+      if (!seenPathKeys.has(key)) {
+        seenPathKeys.add(key);
+        allPaths.push(p);
+      }
+    }
+
+    if (allPaths.length >= 5) break;
   }
 
   // Sort priority: 1) achievable at current level, 2) fewest nodes, 3) lowest max level
-  paths.sort((a, b) => {
+  allPaths.sort((a, b) => {
     const maxA = getPathMaxLevel(a);
     const maxB = getPathMaxLevel(b);
     
@@ -350,5 +365,5 @@ export function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, curre
     return maxA - maxB;
   });
 
-  return { paths, error: null };
+  return { paths: allPaths, error: null };
 }
