@@ -621,8 +621,14 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                         <tr key={s.name}>
                           <td>
                             <strong>{s.name}</strong>
-                            {learners?.length === 1 && s.rank >= 99 && (
-                              <Lock size={12} style={{ marginLeft: '6px', color: 'var(--p3r-text-muted)', verticalAlign: 'middle' }} title="Unique skill" />
+                            {s.rank >= 99 && (
+                              <>
+                                {learners?.length === 1 ? (
+                                  <Lock size={12} style={{ marginLeft: '6px', color: 'var(--p3r-text-muted)', verticalAlign: 'middle' }} title="Unique skill (non-inheritable)" />
+                                ) : (
+                                  <span className="elem-badge" style={{ marginLeft: '6px', fontSize: '0.65rem', padding: '1px 5px', background: 'rgba(255, 100, 100, 0.15)', color: '#ff9999', borderColor: 'rgba(255, 100, 100, 0.3)', verticalAlign: 'middle' }}>No Inherit</span>
+                                )}
+                              </>
                             )}
                           </td>
                           <td><span className="elem-badge">{ELEM_LABELS[s.elem] || s.elem.toUpperCase()}</span></td>
