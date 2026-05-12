@@ -228,10 +228,8 @@ export function searchTree(personaName, requiredSkills, maxDepth, memo) {
           innateProvided: requiredSkills.filter(s => innate.includes(s)),
           ingredients: childPathsCombo
         });
-        if (validPaths.length >= 5) break;
       }
     }
-    if (validPaths.length >= 5) break;
   }
 
   memo[memoKey] = validPaths;
@@ -296,8 +294,6 @@ export function generateFusionTrees(personaName, maxDepth, memo) {
       innateProvided: [],
       ingredients: ingredientNodes
     });
-
-    if (results.length >= 5) break;
   }
 
   memo[memoKey] = results;
@@ -339,8 +335,6 @@ export function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, curre
         allPaths.push(p);
       }
     }
-
-    if (allPaths.length >= 5) break;
   }
 
   // Sort priority: 1) achievable at current level, 2) fewest nodes, 3) lowest max level

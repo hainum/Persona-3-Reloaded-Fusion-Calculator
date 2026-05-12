@@ -2,6 +2,7 @@ import { searchTree, generateFusionTrees, getPathPersonaNames, getPathMaxLevel, 
 import { canInherit } from '../data/DataParser.js';
 
 const MAX_DEPTH = 20;
+const MAX_UNIQUE_PATHS = 200;
 let cancelled = false;
 
 function addPathMetadata(path) {
@@ -62,6 +63,8 @@ self.onmessage = (e) => {
       if (newUniquePaths.length > 0) {
         self.postMessage({ type: 'progress', payload: { depth, paths: newUniquePaths } });
       }
+
+      if (seenPathKeys.size >= MAX_UNIQUE_PATHS) break;
 
       if (pathsAtDepth.length === 0) {
         emptyStreak++;

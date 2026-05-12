@@ -337,10 +337,8 @@ function searchTree(personaName, requiredSkills, maxDepth, memo) {
       }
       if (isAssignmentValid) {
         validPaths.push({ persona: personaName, skillsProvided: requiredSkills, innateProvided: requiredSkills.filter(s => innate.includes(s)), ingredients: childPathsCombo });
-        if (validPaths.length >= 5) break;
       }
     }
-    if (validPaths.length >= 5) break;
   }
   memo[memoKey] = validPaths; return validPaths;
 }
@@ -375,7 +373,6 @@ function generateFusionTrees(personaName, maxDepth, memo) {
       return { persona: ing, skillsProvided: [], innateProvided: [], ingredients: [] };
     });
     results.push({ persona: personaName, skillsProvided: [], innateProvided: [], ingredients: ingredientNodes });
-    if (results.length >= 5) break;
   }
   memo[memoKey] = results; return results;
 }
@@ -416,7 +413,6 @@ function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel
         allPaths.push(addPathMetadata(p));
       }
     }
-    if (allPaths.length >= 5) break;
   }
   allPaths.sort((a, b) => {
     const maxA = a._maxLevel; const maxB = b._maxLevel;
