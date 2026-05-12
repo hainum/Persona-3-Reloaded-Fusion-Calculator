@@ -173,7 +173,6 @@ export function searchTree(personaName, requiredSkills, maxDepth, memo) {
   const memoKey = `${personaName}:${requiredSkills.sort().join(',')}:${maxDepth}`;
   if (memo[memoKey]) return memo[memoKey];
 
-  // Check if target can inherit the required skills
   if (!requiredSkills.every(s => canInherit(personaName, s))) {
     memo[memoKey] = [];
     return [];
@@ -197,7 +196,7 @@ export function searchTree(personaName, requiredSkills, maxDepth, memo) {
   const validPaths = [];
 
   for (const recipe of recipes) {
-    const ingredients = recipe.ingredients; // Array of persona names
+    const ingredients = recipe.ingredients;
     const assignments = distributeSkills(stillRequired, ingredients.length);
 
     for (const assignment of assignments) {
@@ -208,7 +207,6 @@ export function searchTree(personaName, requiredSkills, maxDepth, memo) {
         const ing = ingredients[i];
         const assignedReqs = assignment[i];
         
-        // If no skills are required from this ingredient, we just need the base persona (depth 0)
         let childPaths;
         if (assignedReqs.length === 0) {
            childPaths = [{ persona: ing, skillsProvided: [], innateProvided: [], ingredients: [] }];
@@ -220,7 +218,6 @@ export function searchTree(personaName, requiredSkills, maxDepth, memo) {
           isAssignmentValid = false;
           break;
         }
-        // Take the first valid path for simplicity and performance in UI
         childPathsCombo.push(childPaths[0]);
       }
 
@@ -231,8 +228,7 @@ export function searchTree(personaName, requiredSkills, maxDepth, memo) {
           innateProvided: requiredSkills.filter(s => innate.includes(s)),
           ingredients: childPathsCombo
         });
-        // Limit to 5 paths per state to prevent memory explosion
-        if (validPaths.length >= 5) break; 
+        if (validPaths.length >= 5) break;
       }
     }
     if (validPaths.length >= 5) break;

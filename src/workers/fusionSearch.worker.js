@@ -31,7 +31,7 @@ self.onmessage = (e) => {
 
     const memo = {};
     const seenPathKeys = new Set();
-    let prevCount = -1;
+    let emptyStreak = 0;
 
     for (let depth = 1; depth <= MAX_DEPTH; depth++) {
       if (cancelled) return;
@@ -64,10 +64,10 @@ self.onmessage = (e) => {
       }
 
       if (pathsAtDepth.length === 0) {
-        if (prevCount === 0) break;
-        prevCount = 0;
+        emptyStreak++;
+        if (emptyStreak >= 5) break;
       } else {
-        prevCount = pathsAtDepth.length;
+        emptyStreak = 0;
       }
     }
 

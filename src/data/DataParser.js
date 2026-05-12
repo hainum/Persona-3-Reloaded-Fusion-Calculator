@@ -1,8 +1,8 @@
-import demonDataRaw from './demon-data.json';
-import skillDataRaw from './skill-data.json';
-import fusionChartRaw from './fusion-chart.json';
-import specialRecipesRaw from './special-recipes.json';
-import compConfigRaw from './comp-config.json';
+import demonDataRaw from './demon-data.json' with { type: 'json' };
+import skillDataRaw from './skill-data.json' with { type: 'json' };
+import fusionChartRaw from './fusion-chart.json' with { type: 'json' };
+import specialRecipesRaw from './special-recipes.json' with { type: 'json' };
+import compConfigRaw from './comp-config.json' with { type: 'json' };
 
 // Process Skills
 const skillData = {};
