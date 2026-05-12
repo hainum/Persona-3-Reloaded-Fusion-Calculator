@@ -66,6 +66,8 @@ export default function App() {
       if (type === 'progress') {
         setPaths(prev => prev ? [...prev, ...payload.paths] : [...payload.paths]);
         setCurrentSearchDepth(payload.depth);
+      } else if (type === 'depth_start') {
+        setCurrentSearchDepth(payload.depth);
       } else if (type === 'done') {
         setPaths(prev => prev ?? []);
         setIsCalculating(false);

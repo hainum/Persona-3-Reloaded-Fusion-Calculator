@@ -3,6 +3,7 @@ import { canInherit } from '../data/DataParser.js';
 
 const MAX_DEPTH = 20;
 const MAX_UNIQUE_PATHS = 200;
+const CHUNK_SIZE = 25;
 let cancelled = false;
 
 function addPathMetadata(path) {
@@ -37,6 +38,8 @@ self.onmessage = (e) => {
     for (let depth = 1; depth <= MAX_DEPTH; depth++) {
       if (cancelled) return;
 
+      self.postMessage({ type: 'depth_start', payload: { depth } });
+
       let pathsAtDepth;
       if (targetSkills.length === 0) {
         pathsAtDepth = generateFusionTrees(targetPersona, depth, memo);
@@ -60,8 +63,9 @@ self.onmessage = (e) => {
         }
       }
 
-      if (newUniquePaths.length > 0) {
-        self.postMessage({ type: 'progress', payload: { depth, paths: newUniquePaths } });
+      for (let i = 0; i < newUniquePaths.length; i += CHUNK_SIZE) {
+        const chunk = newUniquePaths.slice(i, i + CHUNK_SIZE);
+        self.postMessage({ type: 'progress', payload: { depth, paths: chunk } });
       }
 
       if (seenPathKeys.size >= MAX_UNIQUE_PATHS) break;
