@@ -569,7 +569,46 @@ console.log('\n── Depth Progression ──');
   assert(d3.paths.length >= d2.paths.length, `Depth 3 (${d3.paths.length}) >= Depth 2 (${d2.paths.length})`);
 }
 
-// ── 9. Path Metadata (_maxLevel, _nodeCount) ─────────────────
+// ── 9. Uncapped Search (Strategy D) ───────────────────────────
+
+console.log('\n── Uncapped Search (Strategy D) ──');
+
+{
+  // Jikokuten has 113 recipes. With Counter (single common skill)
+  // and no depth limit, searchTree should return far more than 5 paths.
+  const memo = {};
+  const results = searchTree('Jikokuten', ['Counter'], 3, memo);
+  assert(results.length > 5, `searchTree uncapped: ${results.length} > 5`);
+}
+
+{
+  // generateFusionTrees at sufficient depth should also exceed 5 trees.
+  const memo = {};
+  const trees = generateFusionTrees('Jikokuten', 3, memo);
+  assert(trees.length > 5, `genTrees uncapped: ${trees.length} > 5`);
+}
+
+{
+  // findFusionPaths should accumulate across depths without a total cap.
+  const r = findFusionPaths('Jikokuten', ['Counter'], 4, 99);
+  assert(r.paths.length > 5, `findFusionPaths uncapped: ${r.paths.length} > 5`);
+}
+
+{
+  // Depth 3 should always have >= depth 2 paths.
+  const d2 = findFusionPaths('Jikokuten', ['Counter'], 2).paths.length;
+  const d3 = findFusionPaths('Jikokuten', ['Counter'], 3).paths.length;
+  assert(d3 >= d2, `Depth progression strict: d3(${d3}) >= d2(${d2})`);
+}
+
+{
+  // Arsene bug case: must find paths with 2 skills.
+  const r = findFusionPaths('Arsene', ['Dark Boost', 'Invigorate 2'], 5, 99);
+  assert(!r.error, 'Arsene bug case: no error');
+  assert(r.paths.length > 0, `Arsene bug case: ${r.paths.length} paths > 0`);
+}
+
+// ── 10. Path Metadata (_maxLevel, _nodeCount) ─────────────────
 
 console.log('\n── Path Metadata ──');
 {
