@@ -63,9 +63,13 @@ self.onmessage = (e) => {
         }
       }
 
-      for (let i = 0; i < newUniquePaths.length; i += CHUNK_SIZE) {
-        const chunk = newUniquePaths.slice(i, i + CHUNK_SIZE);
-        self.postMessage({ type: 'progress', payload: { depth, paths: chunk } });
+      if (newUniquePaths.length === 0) {
+        self.postMessage({ type: 'progress', payload: { depth, paths: [] } });
+      } else {
+        for (let i = 0; i < newUniquePaths.length; i += CHUNK_SIZE) {
+          const chunk = newUniquePaths.slice(i, i + CHUNK_SIZE);
+          self.postMessage({ type: 'progress', payload: { depth, paths: chunk } });
+        }
       }
 
       if (seenPathKeys.size >= MAX_UNIQUE_PATHS) break;
