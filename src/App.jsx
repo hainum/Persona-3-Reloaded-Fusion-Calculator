@@ -28,6 +28,16 @@ export default function App() {
   const workerHealthyRef = useRef(true);
   const currentLevelRef = useRef(currentLevel);
   const searchTimeoutRef = useRef(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 80);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     currentLevelRef.current = currentLevel;
@@ -125,6 +135,15 @@ export default function App() {
   const sortedPaths = useMemo(() => {
     return paths ? sortPaths(paths, currentLevel) : null;
   }, [paths, currentLevel]);
+
+  const pageState = useMemo(() => {
+    if (isCalculating) return 'searching';
+    if (sortedPaths && sortedPaths.length === 0) return 'no-paths';
+    if (sortedPaths && sortedPaths.length > 0) return 'results';
+    return 'idle';
+  }, [isCalculating, sortedPaths]);
+
+
 
   const personaOptions = useMemo(() => {
     return Object.keys(personaData).sort().map(name => ({
@@ -226,62 +245,92 @@ export default function App() {
   }, [targetPersona, targetSkills, requiredPersonas]);
 
   return (
-    <div className="container flex-col gap-6">
-      <header className="glass-panel" style={{ marginBottom: '2rem', padding: '0' }}>
-        <div className="flex justify-between items-center" style={{ padding: '20px 24px 0' }}>
-          <div>
-            <h1 style={{ marginBottom: '0.25rem' }}><Zap size={28} className="text-cyan" style={{ verticalAlign: 'middle', marginRight: '10px' }}/>P3R Fusion Calculator</h1>
-            <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>Persona 3 Reload — Fusion Tool & Database</p>
+    <>
+      <div className={`compact-toolbar ${isScrolled ? 'visible' : ''}`}>
+        <div className="container" style={{ padding: '0 2rem' }}>
+          <div className="flex items-center" style={{ height: '48px' }}>
+            <Zap size={20} className="text-cyan" style={{ marginRight: '20px', flexShrink: 0 }} />
+            <nav className="flex" style={{ flex: 1, alignSelf: 'stretch' }}>
+              <button
+                className={`nav-tab ${view === 'calculator' ? 'active' : ''}`}
+                onClick={() => setView('calculator')}
+              >
+                <Calculator size={16} /> Calculator
+              </button>
+              <button
+                className={`nav-tab ${view === 'database' ? 'active' : ''}`}
+                onClick={() => setView('database')}
+              >
+                <Database size={16} /> Database
+              </button>
+              <button
+                className="nav-tab"
+                onClick={() => setBookmarkDrawerOpen(true)}
+                style={{ marginLeft: 'auto' }}
+              >
+                <Bookmark size={16} /> Bookmarks ({bookmarks.length})
+              </button>
+            </nav>
           </div>
-          {view === 'calculator' && (
-            <div className="flex items-center gap-4">
-              <div className="flex items-center" style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '5px 10px' }}>
-                <span style={{ marginRight: '10px', color: 'var(--p3r-text-muted)', fontSize: '0.9rem' }}>Current Level</span>
-                <button 
-                  style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
-                  onClick={() => setCurrentLevel(Math.max(1, currentLevel - 1))}
-                >-</button>
-                <input 
-                  type="number" 
-                  value={currentLevel} 
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    if (!isNaN(val)) setCurrentLevel(Math.min(99, Math.max(1, val)));
-                  }}
-                  style={{ width: '50px', textAlign: 'center', border: 'none', background: 'transparent', padding: '0', margin: '0 5px' }}
-                  min="1" max="99"
-                />
-                <button 
-                  style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
-                  onClick={() => setCurrentLevel(Math.min(99, currentLevel + 1))}
-                >+</button>
-              </div>
-              
-            </div>
-          )}
         </div>
-        <nav className="flex" style={{ borderTop: '1px solid var(--glass-border)', marginTop: '16px', padding: '0 24px' }}>
-          <button
-            className={`nav-tab ${view === 'calculator' ? 'active' : ''}`}
-            onClick={() => setView('calculator')}
-          >
-            <Calculator size={16} /> Calculator
-          </button>
-          <button
-            className={`nav-tab ${view === 'database' ? 'active' : ''}`}
-            onClick={() => setView('database')}
-          >
-            <Database size={16} /> Database
-          </button>
-          <button
-            className="nav-tab"
-            onClick={() => setBookmarkDrawerOpen(true)}
-            style={{ marginLeft: 'auto' }}
-          >
-            <Bookmark size={16} /> Bookmarks ({bookmarks.length})
-          </button>
-        </nav>
-      </header>
+      </div>
+
+      <div className="container flex-col gap-6" style={{ paddingTop: isScrolled ? 'calc(48px + 2rem)' : '2rem' }}>
+        <header className="glass-panel" style={{ marginBottom: '2rem', padding: '0' }}>
+          <div className="flex justify-between items-center" style={{ padding: '20px 24px 0' }}>
+            <div>
+              <h1 style={{ marginBottom: '0.25rem' }}><Zap size={28} className="text-cyan" style={{ verticalAlign: 'middle', marginRight: '10px' }}/>P3R Fusion Calculator</h1>
+              <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>Persona 3 Reload — Fusion Tool & Database</p>
+            </div>
+            {view === 'calculator' && (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center" style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '5px 10px' }}>
+                  <span style={{ marginRight: '10px', color: 'var(--p3r-text-muted)', fontSize: '0.9rem' }}>Current Level</span>
+                  <button 
+                    style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
+                    onClick={() => setCurrentLevel(Math.max(1, currentLevel - 1))}
+                  >-</button>
+                  <input 
+                    type="number" 
+                    value={currentLevel} 
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (!isNaN(val)) setCurrentLevel(Math.min(99, Math.max(1, val)));
+                    }}
+                    style={{ width: '50px', textAlign: 'center', border: 'none', background: 'transparent', padding: '0', margin: '0 5px' }}
+                    min="1" max="99"
+                  />
+                  <button 
+                    style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
+                    onClick={() => setCurrentLevel(Math.min(99, currentLevel + 1))}
+                  >+</button>
+                </div>
+                
+              </div>
+            )}
+          </div>
+          <nav className="flex" style={{ borderTop: '1px solid var(--glass-border)', marginTop: '16px', padding: '0 24px' }}>
+            <button
+              className={`nav-tab ${view === 'calculator' ? 'active' : ''}`}
+              onClick={() => setView('calculator')}
+            >
+              <Calculator size={16} /> Calculator
+            </button>
+            <button
+              className={`nav-tab ${view === 'database' ? 'active' : ''}`}
+              onClick={() => setView('database')}
+            >
+              <Database size={16} /> Database
+            </button>
+            <button
+              className="nav-tab"
+              onClick={() => setBookmarkDrawerOpen(true)}
+              style={{ marginLeft: 'auto' }}
+            >
+              <Bookmark size={16} /> Bookmarks ({bookmarks.length})
+            </button>
+          </nav>
+        </header>
 
       {view === 'calculator' ? (
         <div className="grid" style={{ gridTemplateColumns: '350px 1fr', gap: '2rem', alignItems: 'start' }}>
@@ -374,38 +423,36 @@ export default function App() {
             </div>
             
             {error && (
-              <div style={{ background: 'rgba(255, 50, 50, 0.2)', padding: '15px', borderRadius: '8px', border: '1px solid #ff4444', color: '#ffaaaa' }}>
+              <div className="anim-fade-slide-down" style={{ background: 'rgba(255, 50, 50, 0.2)', padding: '15px', borderRadius: '8px', border: '1px solid #ff4444', color: '#ffaaaa' }}>
                 <strong>Error: </strong> {error}
               </div>
             )}
 
-            {!error && !sortedPaths && !isCalculating && (
-              <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
-                Select a Target Persona and desired skills to see fusion paths.
-              </div>
-            )}
-
-            {isCalculating && (
-              <div className="text-cyan" style={{ textAlign: 'center', marginTop: '4rem' }}>
-                Searching the Sea of Souls... 
-                {currentSearchDepth > 0 && ` (Depth ${currentSearchDepth})`}
-                {sortedPaths && <span> Found {sortedPaths.length} paths so far...</span>}
-              </div>
-            )}
-
-            {sortedPaths && sortedPaths.length === 0 && !isCalculating && (
-              <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
-                No valid paths found. Try different skills or a different target persona.
-              </div>
-            )}
-
-            {sortedPaths && sortedPaths.length > 0 && (
-              <div>
-                {!isCalculating && <p className="text-cyan">Found {sortedPaths.length} valid paths.</p>}
-                
-                <FusionPathViewer paths={sortedPaths} />
-              </div>
-            )}
+            <div key={pageState} className="anim-fade-up">
+              {pageState === 'idle' && (
+                <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
+                  Select a Target Persona and desired skills to see fusion paths.
+                </div>
+              )}
+              {pageState === 'searching' && (
+                <div className="text-cyan" style={{ textAlign: 'center', marginTop: '4rem' }}>
+                  Searching the Sea of Souls... 
+                  {currentSearchDepth > 0 && ` (Depth ${currentSearchDepth})`}
+                  {sortedPaths && <span> Found {sortedPaths.length} paths so far...</span>}
+                </div>
+              )}
+              {pageState === 'no-paths' && (
+                <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
+                  No valid paths found. Try different skills or a different target persona.
+                </div>
+              )}
+              {pageState === 'results' && (
+                <div>
+                  {!isCalculating && sortedPaths && <p className="text-cyan">Found {sortedPaths.length} valid paths.</p>}
+                  <FusionPathViewer paths={sortedPaths} />
+                </div>
+              )}
+            </div>
           </main>
         </div>
       ) : (
@@ -437,6 +484,7 @@ export default function App() {
         />
       )}
     </div>
+    </>
   );
 }
 

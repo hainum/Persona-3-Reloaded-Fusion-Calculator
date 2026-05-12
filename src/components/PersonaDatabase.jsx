@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { personaData, skillData, personaList, skillLearnedBy, compConfig } from '../data/DataParser';
 import { getAllRecipes, getForwardFusions } from '../lib/FusionCalculator';
 import { Search, List, ShieldQuestion, ArrowUpDown, ArrowLeft, Star, BookmarkPlus, Plus, Lock } from 'lucide-react';
@@ -360,6 +360,20 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
   const [skillSort, setSkillSort] = useState({ key: 'name', asc: true });
   const [saveBmConfig, setSaveBmConfig] = useState(null);
   const [addSkillName, setAddSkillName] = useState(null);
+  const personaListScrollRef = useRef(0);
+
+  useEffect(() => {
+    if (selectedPersona) {
+      personaListScrollRef.current = window.scrollY;
+      window.scrollTo(0, 0);
+    }
+  }, [selectedPersona]);
+
+  useEffect(() => {
+    if (!selectedPersona) {
+      window.scrollTo(0, personaListScrollRef.current);
+    }
+  }, [selectedPersona]);
 
   const dbPersonaOptions = useMemo(() => {
     if (personaOptions.length > 0) return personaOptions;

@@ -412,3 +412,38 @@ button:disabled {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--p3r-cyan);
 }
+
+/* Compact Toolbar */
+.compact-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+.compact-toolbar.visible {
+  transform: translateY(0);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Animations */
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.anim-fade-slide-down {
+  animation: fadeSlideDown 0.3s ease;
+}
+.anim-fade-up {
+  animation: fadeUp 0.3s ease;
+}
