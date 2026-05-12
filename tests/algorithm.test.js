@@ -91,6 +91,9 @@ const FMT_DESC = {
       if (s.power > 0) return `Restore ${s.power} ${what} to ${s.target}`;
       return `${what} to ${s.target}`;
     }
+    if ((s.elem === 'sup' || s.elem === 'spe') && s.power === 0 && s.statusEffect) {
+      return `${s.statusEffect} \u2014 ${s.target}`;
+    }
     return `${s.power} ${ELEM_LABELS[s.elem] || s.elem.toUpperCase()} dmg to ${s.target}`;
   },
   FMTCureAilment: (s) => `Cure ${s.statusEffect} of all allies`,
@@ -123,7 +126,11 @@ const FMT_DESC = {
   FMTNullAilment: (s) => `Null ${s.statusEffect}`,
   FMTNullElem: (s) => `Null ${s.statusEffect}`,
   FMTPersonaCounterN: (s) => `${s.ailmentChance}% chance to counter phys dmg`,
-  FMTPersonaKaja: (s) => `Raise ${s.statusEffect} of all allies for 3 turns`,
+  FMTPersonaKaja: (s) => {
+    const pct = Math.abs(s.ailmentChance - 1100);
+    const verb = s.ailmentChance > 1100 ? 'Raise' : 'Lower';
+    return `${verb} ${s.statusEffect} of ${s.target} by ${pct}% for 3 turns`;
+  },
   FMTPersonaLifeDrainN: (s) => `Drain ${s.statusEffect} from foe`,
   FMTPlus: (s) => {
     const label = s.statusEffect.replace(/^[a-z]/, (c) => c.toUpperCase());
@@ -667,6 +674,14 @@ console.log('\n── Skill Effect Descriptions ──');
   assert(eff('Agidyne') === '220 Fire dmg to 1 foe', 'Agidyne: 220 Fire dmg to 1 foe');
   assert(eff('Megidolaon') === '690 Almighty dmg to All foes', 'Megidolaon: 690 Almighty dmg to All foes');
   assert(eff('Bufu') === '40 Ice dmg to 1 foe (15% Freeze)', 'Bufu: 40 Ice dmg to 1 foe (15% Freeze)');
+  assert(eff('Tarukaja') === 'Raise attack of 1 ally by 40% for 3 turns', 'Tarukaja: Raise attack of 1 ally by 40% for 3 turns');
+  assert(eff('Matarukaja') === 'Raise attack of All allies by 40% for 3 turns', 'Matarukaja: Raise attack of All allies by 40% for 3 turns');
+  assert(eff('Tarunda') === 'Lower attack of 1 foe by 40% for 3 turns', 'Tarunda: Lower attack of 1 foe by 40% for 3 turns');
+  assert(eff('Matarunda') === 'Lower attack of All foes by 40% for 3 turns', 'Matarunda: Lower attack of All foes by 40% for 3 turns');
+  assert(eff('Sukukaja') === 'Raise hit and evasion of 1 ally by 30% for 3 turns', 'Sukukaja: Raise hit and evasion of 1 ally by 30% for 3 turns');
+  assert(eff('Masukunda') === 'Lower hit and evasion of All foes by 30% for 3 turns', 'Masukunda: Lower hit and evasion of All foes by 30% for 3 turns');
+  assert(eff('Heat Riser') === 'Tarukaja + Rakukaja + Sukukaja \u2014 1 ally', 'Heat Riser: multi-effect description');
+  assert(eff('Debilitate') === 'Tarunda + Rakunda + Sukunda \u2014 1 foe', 'Debilitate: multi-effect description');
 }
 
 // ── 12. skillLearnedBy includes innate skills ──────────────────

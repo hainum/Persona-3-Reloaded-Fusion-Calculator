@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { personaData, skillData, personaList, skillLearnedBy, compConfig } from '../data/DataParser';
 import { getAllRecipes, getForwardFusions } from '../lib/FusionCalculator';
-import { Search, List, ShieldQuestion, ArrowUpDown, ArrowLeft, Star, BookmarkPlus, Plus, Lock } from 'lucide-react';
+import { Search, X, List, ShieldQuestion, ArrowUpDown, ArrowLeft, Star, BookmarkPlus, Plus, Lock } from 'lucide-react';
 import { SaveBookmarkModal, AddSkillToBookmarkModal } from './BookmarkModal';
 
 const ELEM_LABELS = {
@@ -32,6 +32,9 @@ const FMT_DESC = {
       const what = (s.statusEffect || 'HP').replace(/ restore/i, '');
       if (s.power > 0) return `Restore ${s.power} ${what} to ${s.target}`;
       return `${what} to ${s.target}`;
+    }
+    if ((s.elem === 'sup' || s.elem === 'spe') && s.power === 0 && s.statusEffect) {
+      return `${s.statusEffect} \u2014 ${s.target}`;
     }
     return `${s.power} ${ELEM_LABELS[s.elem] || s.elem.toUpperCase()} dmg to ${s.target}`;
   },
@@ -65,7 +68,11 @@ const FMT_DESC = {
   FMTNullAilment: (s) => `Null ${s.statusEffect}`,
   FMTNullElem: (s) => `Null ${s.statusEffect}`,
   FMTPersonaCounterN: (s) => `${s.ailmentChance}% chance to counter phys dmg`,
-  FMTPersonaKaja: (s) => `Raise ${s.statusEffect} of all allies for 3 turns`,
+  FMTPersonaKaja: (s) => {
+    const pct = Math.abs(s.ailmentChance - 1100);
+    const verb = s.ailmentChance > 1100 ? 'Raise' : 'Lower';
+    return `${verb} ${s.statusEffect} of ${s.target} by ${pct}% for 3 turns`;
+  },
   FMTPersonaLifeDrainN: (s) => `Drain ${s.statusEffect} from foe`,
   FMTPlus: (s) => {
     const label = s.statusEffect.replace(/^[a-z]/, (c) => c.toUpperCase());
@@ -360,6 +367,8 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
   const [skillSort, setSkillSort] = useState({ key: 'name', asc: true });
   const [saveBmConfig, setSaveBmConfig] = useState(null);
   const [addSkillName, setAddSkillName] = useState(null);
+  const personaSearchRef = useRef(null);
+  const skillSearchRef = useRef(null);
   const personaListScrollRef = useRef(0);
 
   useEffect(() => {
@@ -374,6 +383,20 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
       window.scrollTo(0, personaListScrollRef.current);
     }
   }, [selectedPersona]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const isMac = navigator.platform.includes('Mac');
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if ((mod && e.key === 'f') || e.key === '/' || (mod && e.key === 'k')) {
+        e.preventDefault();
+        const ref = tab === 'personas' ? personaSearchRef : skillSearchRef;
+        ref.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [tab]);
 
   const dbPersonaOptions = useMemo(() => {
     if (personaOptions.length > 0) return personaOptions;
@@ -484,12 +507,22 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                 <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
                   <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
                   <input
+                    ref={personaSearchRef}
                     type="text"
                     placeholder="Search by name or arcana..."
                     value={personaSearch}
                     onChange={e => setPersonaSearch(e.target.value)}
                     style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
                   />
+                  {personaSearch && (
+                    <button
+                      onClick={() => { setPersonaSearch(''); personaSearchRef.current?.focus(); }}
+                      style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', color: 'var(--p3r-text-muted)', flexShrink: 0, lineHeight: 0 }}
+                      title="Clear search"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                   <span style={{ color: 'var(--p3r-text-muted)', fontSize: '0.85rem', flexShrink: 0 }}>{filteredPersonas.length} personas</span>
                 </div>
               </div>
@@ -538,12 +571,22 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                 <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
                   <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
                   <input
+                    ref={skillSearchRef}
                     type="text"
                     placeholder="Search by name, element, or effect..."
                     value={skillSearch}
                     onChange={e => setSkillSearch(e.target.value)}
                     style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
                   />
+                  {skillSearch && (
+                    <button
+                      onClick={() => { setSkillSearch(''); skillSearchRef.current?.focus(); }}
+                      style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', color: 'var(--p3r-text-muted)', flexShrink: 0, lineHeight: 0 }}
+                      title="Clear search"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                   <span style={{ color: 'var(--p3r-text-muted)', fontSize: '0.85rem', flexShrink: 0 }}>{filteredSkills.length} skills</span>
                 </div>
               </div>
