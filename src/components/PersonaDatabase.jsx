@@ -105,6 +105,7 @@ function getEffect(skill) {
   if (effectDesc && effectDesc.includes('$')) {
     let desc = effectDesc;
     if (power) desc = desc.replace('$1', power);
+    else if (ailmentChance) desc = desc.replace('$1', ailmentChance);
     if (statusEffect) desc = desc.replace('$2', statusEffect);
     desc = desc.replace(/\$[12]/g, '?');
     return appendMultiHitStats(skill, desc);

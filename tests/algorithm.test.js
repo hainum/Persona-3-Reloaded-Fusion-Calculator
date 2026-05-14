@@ -154,6 +154,7 @@ function getEffect(skill) {
   if (effectDesc && effectDesc.includes('$')) {
     let desc = effectDesc;
     if (power) desc = desc.replace('$1', power);
+    else if (ailmentChance) desc = desc.replace('$1', ailmentChance);
     if (statusEffect) desc = desc.replace('$2', statusEffect);
     desc = desc.replace(/\$[12]/g, '?');
     return desc;
@@ -717,6 +718,9 @@ console.log('\n── Skill Effect Descriptions ──');
   assert(eff('Masukunda') === 'Lower hit and evasion of All foes by 30% for 3 turns', 'Masukunda: Lower hit and evasion of All foes by 30% for 3 turns');
   assert(eff('Heat Riser') === 'Tarukaja + Rakukaja + Sukukaja \u2014 1 ally', 'Heat Riser: multi-effect description');
   assert(eff('Debilitate') === 'Tarunda + Rakunda + Sukunda \u2014 1 foe', 'Debilitate: multi-effect description');
+  assert(eff('Revolution') === 'crit rate +15% for 3 turns', 'Revolution: crit rate +15% for 3 turns');
+  assert(eff('Rebellion') === 'crit rate +7% for 3 turns', 'Rebellion: crit rate +7% for 3 turns');
+  assert(eff('Crit Rate Amp') === 'crit rate +15%, overwrites Crit Rate Boost', 'Crit Rate Amp: crit rate +15%, overwrites Crit Rate Boost');
 }
 
 // ── 12. skillLearnedBy includes innate skills ──────────────────
