@@ -311,12 +311,14 @@ function distributeSkills(skills, numBuckets) {
   return result;
 }
 
-function searchTree(personaName, requiredSkills, maxDepth, memo) {
+function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSkills) {
   const memoKey = `${personaName}:${requiredSkills.sort().join(',')}:${maxDepth}`;
   if (memo[memoKey]) return memo[memoKey];
   if (!requiredSkills.every(s => canInherit(personaName, s))) { memo[memoKey] = []; return []; }
   const innate = getInnateSkills(personaName);
-  const stillRequired = requiredSkills.filter(s => !innate.includes(s));
+  const extra = (customPersonaSkills && customPersonaSkills[personaName]) || [];
+  const provided = [...innate, ...extra];
+  const stillRequired = requiredSkills.filter(s => !provided.includes(s));
   if (stillRequired.length === 0) {
     const res = [{ persona: personaName, skillsProvided: requiredSkills, innateProvided: requiredSkills.filter(s => innate.includes(s)), ingredients: [] }];
     memo[memoKey] = res; return res;
@@ -332,7 +334,7 @@ function searchTree(personaName, requiredSkills, maxDepth, memo) {
         const ing = ingredients[i]; const assignedReqs = assignment[i];
         let childPaths;
         if (assignedReqs.length === 0) { childPaths = [{ persona: ing, skillsProvided: [], innateProvided: [], ingredients: [] }]; }
-        else { childPaths = searchTree(ing, assignedReqs, maxDepth - 1, memo); }
+        else { childPaths = searchTree(ing, assignedReqs, maxDepth - 1, memo, customPersonaSkills); }
         if (childPaths.length === 0) { isAssignmentValid = false; break; }
         childPathsCombo.push(childPaths[0]);
       }
@@ -385,7 +387,7 @@ function addPathMetadata(path) {
 }
 
 // Accumulate unique paths across depths (mirrors the worker's approach)
-function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel = 99, requiredPersonas = null) {
+function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel = 99, requiredPersonas = null, customPersonaSkills = null) {
   for (const skill of targetSkills) {
     if (!canInherit(targetPersona, skill)) {
       return { error: `Persona ${targetPersona} cannot inherit skill ${skill}.` };
@@ -399,7 +401,7 @@ function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel
     if (targetSkills.length === 0) {
       pathsAtDepth = generateFusionTrees(targetPersona, depth, memo);
     } else {
-      pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo);
+      pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo, customPersonaSkills);
     }
     if (requiredPersonas && requiredPersonas.length > 0) {
       pathsAtDepth = pathsAtDepth.filter(p => {
@@ -653,6 +655,30 @@ console.log('\n── No Skills, No Filter ──');
   const r = findFusionPaths('Jikokuten', [], 2, 99, null);
   assert(!r.error, 'No skills/no filter: no error');
   assert(r.paths.length > 0, `No skills/no filter: ${r.paths.length} recipe paths`);
+}
+
+// ── 9b. Custom Persona Search ───────────────────────────────────
+
+console.log('\n── Custom Persona Search ──');
+{
+  // Custom persona skills augment innate — searchTree sees them as provided
+  const memo = {};
+  const paths = searchTree('Jikokuten', ['Attack'], 1, memo, { Jikokuten: ['Attack'] });
+  assert(paths.length > 0, 'Custom Attack on Jikokuten: found at depth 1 (provided by custom)');
+
+  // Without custom, Jikokuten doesn't have Attack, so it needs depth > 1
+  const memo2 = {};
+  const paths2 = searchTree('Jikokuten', ['Attack'], 1, memo2);
+  assert(paths2.length === 0, 'Custom Attack on Jikokuten: no paths at depth 1 without custom');
+
+  // Custom persona skills pass through findFusionPaths
+  const r = findFusionPaths('Arsene', ['Tarukaja'], 2, 99, null, { Arsene: ['Tarukaja'] });
+  assert(!r.error, 'Arsene + Tarukaja (custom): no error');
+  assert(r.paths.length > 0, 'Arsene + Tarukaja (custom): paths found');
+
+  // null/undefined customPersonaSkills = no change
+  const r2 = findFusionPaths('Jikokuten', ['Counter'], 2, 99);
+  assert(!r2.error, 'null customPersonaSkills: no error');
 }
 
 // ── 10. SP Cost Decoding ────────────────────────────────────────

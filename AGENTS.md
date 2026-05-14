@@ -40,6 +40,8 @@
 - **Bookmarks persist via `localStorage`** with key `p3r_bookmarks`. `BookmarkManager.js` provides utility functions — no React state management in the lib layer.
 - **`SaveBookmarkModal` accepts spread config** (`saveBmConfig` object with `initialPersona`, `initialSkills`, `initialRequiredPersonas`) — always spread `{...saveBmConfig}` rather than passing individual props.
 - **Bookmark matching** is by value equality (same persona, skills, required personas). The calculator shows an indicator tag when a match is found.
+- **Custom Personas** persist via `localStorage` key `p3r_custom_personas`. Format: `{ PersonaName: [SkillName, ...], ... }`. Custom persona skills are merged with innate skills in `searchTree` via the `customPersonaSkills` parameter — the algorithm treats them as already-provided, reducing depth requirements.
+- **`CustomPersonaModal`** is a reusable editor for persona name + skill list. onSave receives `(name, skills[])`. Used in App.jsx for both add and edit modes.
 - **Nav button opens drawer**: The Bookmarks button in the top nav is pushed to the right via `marginLeft: 'auto'`. When adding more nav items, ensure it stays right-aligned.
 
 ## Gotchas (continued)
@@ -47,6 +49,8 @@
 - **Unicode in JSX text**: `\uXXXX` escape sequences are not processed in JSX text content. Wrap in `{'\uXXXX'}` or use the actual character.
 - **`getForwardFusions`** in `FusionCalculator.js` — precomputed at module load alongside `recipeMap`. Returns fusions where a given persona is an ingredient.
 - **`skillLearnedBy` sorting** — Entries are sorted by display level: for innate skills (level < 1), uses the persona's base level; for learned skills, uses the unlock level.
+- **`customPersonaSkills` defaults to `null`** in `searchTree`, `generateFusionTrees`, and `findFusionPaths`. Pass `null` or `undefined` when no custom personas are configured — no behavior change.
+- **Custom personas only add skills** — they don't modify persona stats, levels, or fusion recipes. A custom persona is just a normal persona with extra "innate" skills for inheritance purposes.
 - **Skill database filter** — Only skills present in `skillLearnedBy` (learnable by at least one persona) are shown. Enemy-only skills like "Accelerated Charging" are excluded.
 - **`SearchableSelect` arrow nav** — Up/Down arrows navigate the filtered list with visual highlight. Enter selects the highlighted item (or the single item when only 1 result). Escape closes the dropdown.
 - **`FMTBase` rec branch** — When `power === 0` (status-cure skills like Amrita Drop), renders just `{statusEffect} to {target}` instead of `Restore 0 ...`.

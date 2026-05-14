@@ -368,6 +368,7 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
   const [skillSort, setSkillSort] = useState({ key: 'name', asc: true });
   const [saveBmConfig, setSaveBmConfig] = useState(null);
   const [addSkillName, setAddSkillName] = useState(null);
+  const [skillPersonaDetail, setSkillPersonaDetail] = useState(null);
   const personaSearchRef = useRef(null);
   const skillSearchRef = useRef(null);
   const personaListScrollRef = useRef(0);
@@ -480,7 +481,15 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
           </div>
           <PersonaDetail personaName={selectedPersona} onBack={() => setSelectedPersona(null)} onBookmarkConfig={(config) => setSaveBmConfig(config)} />
         </div>
-        {saveBmConfig && (
+      {skillPersonaDetail && (
+        <>
+          <div className="modal-overlay open" onClick={() => setSkillPersonaDetail(null)} />
+          <div className="modal-content" style={{ maxWidth: '900px', width: '95vw', maxHeight: '90vh' }}>
+            <PersonaDetail personaName={skillPersonaDetail} onBack={() => setSkillPersonaDetail(null)} onBookmarkConfig={(config) => setSaveBmConfig(config)} />
+          </div>
+        </>
+      )}
+      {saveBmConfig && (
           <SaveBookmarkModal
             {...saveBmConfig}
             personaOptions={dbPersonaOptions}
@@ -648,8 +657,8 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                                   const isSpecial = l.level > 99;
                                   const displayLvl = isSpecial ? <span className="theurgy-chip">Theurgy</span> : (l.level < 1 ? personaData[l.personaName]?.lvl ?? l.level : l.level);
                                   return (
-                                    <span key={l.personaName} className="learner-tag">{typeof displayLvl === 'object' ? <>{displayLvl}</> : <>({displayLvl})</>} {l.personaName}</span>
-                                  );
+                                      <span key={l.personaName} className="learner-tag" onClick={() => setSkillPersonaDetail(l.personaName)} style={{ cursor: 'pointer' }}>{typeof displayLvl === 'object' ? <>{displayLvl}</> : <>({displayLvl})</>} {l.personaName}</span>
+                                    );
                                 })}
                               </div>
                             ) : (

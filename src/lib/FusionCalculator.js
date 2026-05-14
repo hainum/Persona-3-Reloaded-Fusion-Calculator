@@ -169,7 +169,7 @@ function distributeSkills(skills, numBuckets) {
   return result;
 }
 
-export function searchTree(personaName, requiredSkills, maxDepth, memo) {
+export function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSkills) {
   const memoKey = `${personaName}:${requiredSkills.sort().join(',')}:${maxDepth}`;
   if (memo[memoKey]) return memo[memoKey];
 
@@ -179,7 +179,9 @@ export function searchTree(personaName, requiredSkills, maxDepth, memo) {
   }
 
   const innate = getInnateSkills(personaName);
-  const stillRequired = requiredSkills.filter(s => !innate.includes(s));
+  const extra = (customPersonaSkills && customPersonaSkills[personaName]) || [];
+  const provided = [...innate, ...extra];
+  const stillRequired = requiredSkills.filter(s => !provided.includes(s));
 
   if (stillRequired.length === 0) {
     const res = [{ persona: personaName, skillsProvided: requiredSkills, innateProvided: requiredSkills.filter(s => innate.includes(s)), ingredients: [] }];
@@ -211,7 +213,7 @@ export function searchTree(personaName, requiredSkills, maxDepth, memo) {
         if (assignedReqs.length === 0) {
            childPaths = [{ persona: ing, skillsProvided: [], innateProvided: [], ingredients: [] }];
         } else {
-           childPaths = searchTree(ing, assignedReqs, maxDepth - 1, memo);
+           childPaths = searchTree(ing, assignedReqs, maxDepth - 1, memo, customPersonaSkills);
         }
 
         if (childPaths.length === 0) {
@@ -300,7 +302,7 @@ export function generateFusionTrees(personaName, maxDepth, memo) {
   return results;
 }
 
-export function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel = 99, requiredPersonas = null) {
+export function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel = 99, requiredPersonas = null, customPersonaSkills = null) {
   for (const skill of targetSkills) {
     if (!canInherit(targetPersona, skill)) {
       return { error: `Persona ${targetPersona} cannot inherit skill ${skill}.` };
@@ -318,7 +320,7 @@ export function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, curre
     if (targetSkills.length === 0) {
       pathsAtDepth = generateFusionTrees(targetPersona, depth, memo);
     } else {
-      pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo);
+      pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo, customPersonaSkills);
     }
 
     if (requiredPersonas && requiredPersonas.length > 0) {

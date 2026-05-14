@@ -4,6 +4,7 @@ import FusionPathViewer from './components/FusionPathViewer';
 import PersonaDatabase from './components/PersonaDatabase';
 import BookmarkDrawer from './components/BookmarkDrawer';
 import { SaveBookmarkModal } from './components/BookmarkModal';
+import CustomPersonaModal from './components/CustomPersonaModal';
 import { personaData, skillData, isSkillInheritable } from './data/DataParser';
 import { loadBookmarks, saveBookmarks, createBookmark, findMatchingBookmark } from './lib/BookmarkManager';
 import { Zap, Search, X, Calculator, Database, Bookmark, BookmarkPlus } from 'lucide-react';
@@ -22,6 +23,13 @@ export default function App() {
     return saved ? parseInt(saved, 10) : 99;
   });
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
+  const [customPersonas, setCustomPersonas] = useState(() => {
+    try {
+      const saved = localStorage.getItem('p3r_custom_personas');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  const [customPersonaModal, setCustomPersonaModal] = useState(null); // { persona?, skills? } or null
   const [bookmarkDrawerOpen, setBookmarkDrawerOpen] = useState(false);
   const [saveBookmarkConfig, setSaveBookmarkConfig] = useState(null);
   const workerRef = useRef(null);
@@ -47,6 +55,10 @@ export default function App() {
   useEffect(() => {
     saveBookmarks(bookmarks);
   }, [bookmarks]);
+
+  useEffect(() => {
+    localStorage.setItem('p3r_custom_personas', JSON.stringify(customPersonas));
+  }, [customPersonas]);
 
   const sortPaths = (pathsList, level) => {
     return [...pathsList].sort((a, b) => {
@@ -180,6 +192,18 @@ export default function App() {
     setRequiredPersonas(requiredPersonas.filter(p => p !== name));
   };
 
+  const handleSaveCustomPersona = (name, skills) => {
+    setCustomPersonas(prev => ({ ...prev, [name]: skills }));
+  };
+
+  const handleDeleteCustomPersona = (name) => {
+    setCustomPersonas(prev => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
   const cancelSearch = () => {
     const w = workerRef.current;
     if (w && workerHealthyRef.current) {
@@ -222,6 +246,7 @@ export default function App() {
         targetSkills: activeSkills,
         currentLevel,
         requiredPersonas: requiredPersonas.length > 0 ? requiredPersonas : null,
+        customPersonaSkills: Object.keys(customPersonas).length > 0 ? customPersonas : null,
       }
     });
   };
@@ -405,6 +430,45 @@ export default function App() {
             >
               <BookmarkPlus size={16} /> Save as Bookmark
             </button>
+
+            <div style={{ marginTop: '1rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Custom Personas</h3>
+              <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
+                Define personas with extra skills for inheritance.
+              </span>
+
+              {Object.keys(customPersonas).length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {Object.entries(customPersonas).map(([name, skills]) => (
+                    <span
+                      key={name}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        background: 'rgba(0, 229, 255, 0.15)', border: '1px solid rgba(0, 229, 255, 0.3)',
+                        borderRadius: '4px', padding: '3px 8px', fontSize: '0.85rem',
+                        color: 'var(--p3r-cyan)', cursor: 'pointer'
+                      }}
+                      onClick={() => setCustomPersonaModal({ persona: name, skills })}
+                    >
+                      {name} ({skills.length})
+                      <X
+                        size={14}
+                        style={{ cursor: 'pointer', opacity: 0.7 }}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteCustomPersona(name); }}
+                      />
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <button
+                className="icon-btn"
+                onClick={() => setCustomPersonaModal({ persona: null, skills: [] })}
+                style={{ width: '100%', fontSize: '0.85rem', padding: '6px 12px', border: '1px dashed var(--glass-border)' }}
+              >
+                + Add Custom Persona
+              </button>
+            </div>
           </aside>
 
           <main className="glass-panel" style={{ minHeight: '500px' }}>
@@ -483,6 +547,16 @@ export default function App() {
           skillOptions={skillOptions}
           onSave={handleSaveBookmark}
           onClose={() => setSaveBookmarkConfig(null)}
+        />
+      )}
+      {customPersonaModal && (
+        <CustomPersonaModal
+          personaOptions={personaOptions}
+          skillOptions={skillOptions}
+          initialPersona={customPersonaModal.persona}
+          initialSkills={customPersonaModal.skills}
+          onSave={handleSaveCustomPersona}
+          onClose={() => setCustomPersonaModal(null)}
         />
       )}
     </div>

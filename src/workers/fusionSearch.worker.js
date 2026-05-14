@@ -22,7 +22,7 @@ self.onmessage = (e) => {
 
   if (type === 'search') {
     cancelled = false;
-    const { targetPersona, targetSkills, requiredPersonas } = payload;
+    const { targetPersona, targetSkills, requiredPersonas, customPersonaSkills } = payload;
 
     for (const skill of targetSkills) {
       if (!canInherit(targetPersona, skill)) {
@@ -44,7 +44,7 @@ self.onmessage = (e) => {
       if (targetSkills.length === 0) {
         pathsAtDepth = generateFusionTrees(targetPersona, depth, memo);
       } else {
-        pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo);
+        pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo, customPersonaSkills);
       }
 
       if (requiredPersonas && requiredPersonas.length > 0) {
