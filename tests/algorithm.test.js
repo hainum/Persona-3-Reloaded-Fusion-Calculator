@@ -141,7 +141,18 @@ const FMT_DESC = {
   FMTRepelElem: (s) => `Repel ${s.statusEffect}`,
   FMTResistAilment: (s) => `Resist ${s.statusEffect}`,
   FMTResistElem: (s) => `Resist ${s.statusEffect}`,
-  FMTTimes: (s) => `${s.statusEffect} up`,
+  FMTTimes: (s) => {
+    const ac = s.ailmentChance || 1100;
+    if (ac === 1025) return `${s.statusEffect} to 25% of normal`;
+    if (ac <= 1050) return `Halves ${s.statusEffect}`;
+    if (ac < 1100) return ac <= 1085 ? `Greatly reduces ${s.statusEffect}` : `Reduces ${s.statusEffect}`;
+    if (ac > 1100) {
+      if (ac >= 1200) return `Increases ${s.statusEffect}`;
+      if (ac >= 1130) return `Greatly ${s.statusEffect} up`;
+      return `${s.statusEffect} up`;
+    }
+    return s.statusEffect;
+  },
 };
 
 function getEffect(skill) {
@@ -903,6 +914,19 @@ console.log('\n── Skill Effect Descriptions ──');
   assert(eff('Revolution') === 'crit rate +15% for 3 turns', 'Revolution: crit rate +15% for 3 turns');
   assert(eff('Rebellion') === 'crit rate +7% for 3 turns', 'Rebellion: crit rate +7% for 3 turns');
   assert(eff('Crit Rate Amp') === 'crit rate +15%, overwrites Crit Rate Boost', 'Crit Rate Amp: crit rate +15%, overwrites Crit Rate Boost');
+
+  // FMTTimes skills
+  assert(eff('Ali Dance') === 'Halves incoming hit rate', 'Ali Dance: Halves incoming hit rate');
+  assert(eff('Spell Master') === 'Halves SP costs', 'Spell Master: Halves SP costs');
+  assert(eff('Arms Master') === 'Halves HP costs', 'Arms Master: Halves HP costs');
+  assert(eff('Sharp Student') === 'Halves incoming crit rate', 'Sharp Student: Halves incoming crit rate');
+  assert(eff('Apt Pupil') === 'Increases crit rate', 'Apt Pupil: Increases crit rate');
+  assert(eff('Healing Master') === 'Halves Recovery skill costs', 'Healing Master: Halves Recovery skill costs');
+  assert(eff('Healing Apex') === 'Recovery skill costs to 25% of normal', 'Healing Apex: Recovery skill costs to 25% of normal');
+  assert(eff('Buff Boost') === '-kaja effects on self up', 'Buff Boost: -kaja effects on self up');
+  assert(eff('Buff Amp') === 'Greatly -kaja effects on self up', 'Buff Amp: Greatly -kaja effects on self up');
+  assert(eff('Weakness Buffer') === 'Reduces all weakness dmg taken', 'Weakness Buffer: Reduces all weakness dmg taken');
+  assert(eff('Weakness Mitigator') === 'Greatly reduces all weakness dmg taken', 'Weakness Mitigator: Greatly reduces all weakness dmg taken');
 }
 
 // ── 12. skillLearnedBy includes innate skills ──────────────────

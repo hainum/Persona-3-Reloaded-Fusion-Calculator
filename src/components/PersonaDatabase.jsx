@@ -83,7 +83,18 @@ const FMT_DESC = {
   FMTRepelElem: (s) => `Repel ${s.statusEffect}`,
   FMTResistAilment: (s) => `Resist ${s.statusEffect}`,
   FMTResistElem: (s) => `Resist ${s.statusEffect}`,
-  FMTTimes: (s) => `${s.statusEffect} up`,
+  FMTTimes: (s) => {
+    const ac = s.ailmentChance || 1100;
+    if (ac === 1025) return `${s.statusEffect} to 25% of normal`;
+    if (ac <= 1050) return `Halves ${s.statusEffect}`;
+    if (ac < 1100) return ac <= 1085 ? `Greatly reduces ${s.statusEffect}` : `Reduces ${s.statusEffect}`;
+    if (ac > 1100) {
+      if (ac >= 1200) return `Increases ${s.statusEffect}`;
+      if (ac >= 1130) return `Greatly ${s.statusEffect} up`;
+      return `${s.statusEffect} up`;
+    }
+    return s.statusEffect;
+  },
 };
 
 function appendMultiHitStats(skill, desc) {
