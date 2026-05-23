@@ -18,6 +18,7 @@ export default function App() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [currentSearchDepth, setCurrentSearchDepth] = useState(0);
   const [requiredPersonas, setRequiredPersonas] = useState([]);
+  const [excludedPersonas, setExcludedPersonas] = useState([]);
   const [currentLevel, setCurrentLevel] = useState(() => {
     const saved = localStorage.getItem('p3r_currentLevel');
     return saved ? parseInt(saved, 10) : 99;
@@ -37,6 +38,7 @@ export default function App() {
   const currentLevelRef = useRef(currentLevel);
   const searchTimeoutRef = useRef(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [levelText, setLevelText] = useState(String(currentLevel));
 
   useEffect(() => {
     const handleScroll = () => {
@@ -57,6 +59,16 @@ export default function App() {
   }, [bookmarks]);
 
   useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === 'p3r_bookmarks') {
+        setBookmarks(loadBookmarks());
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('p3r_custom_personas', JSON.stringify(customPersonas));
   }, [customPersonas]);
 
@@ -67,7 +79,10 @@ export default function App() {
       if (aPossible && !bPossible) return -1;
       if (!aPossible && bPossible) return 1;
       if (a._nodeCount !== b._nodeCount) return a._nodeCount - b._nodeCount;
-      return a._maxLevel - b._maxLevel;
+      if (a._maxLevel !== b._maxLevel) return a._maxLevel - b._maxLevel;
+      if (a._usesCustomSkills && !b._usesCustomSkills) return -1;
+      if (!a._usesCustomSkills && b._usesCustomSkills) return 1;
+      return 0;
     });
   };
 
@@ -192,6 +207,20 @@ export default function App() {
     setRequiredPersonas(requiredPersonas.filter(p => p !== name));
   };
 
+  const handleAddExcludedPersona = (name) => {
+    if (name && !excludedPersonas.includes(name) && name !== targetPersona) {
+      setExcludedPersonas([...excludedPersonas, name]);
+    }
+  };
+
+  const handleRemoveExcludedPersona = (name) => {
+    setExcludedPersonas(excludedPersonas.filter(p => p !== name));
+  };
+
+  const handleClearExcludedPersonas = () => {
+    setExcludedPersonas([]);
+  };
+
   const handleSaveCustomPersona = (name, skills) => {
     setCustomPersonas(prev => ({ ...prev, [name]: skills }));
   };
@@ -246,6 +275,7 @@ export default function App() {
         targetSkills: activeSkills,
         currentLevel,
         requiredPersonas: requiredPersonas.length > 0 ? requiredPersonas : null,
+        excludedPersonas: excludedPersonas.length > 0 ? excludedPersonas : null,
         customPersonaSkills: Object.keys(customPersonas).length > 0 ? customPersonas : null,
       }
     });
@@ -269,7 +299,7 @@ export default function App() {
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [targetPersona, targetSkills, requiredPersonas]);
+  }, [targetPersona, targetSkills, requiredPersonas, customPersonas, excludedPersonas]);
 
   return (
     <>
@@ -313,23 +343,39 @@ export default function App() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center" style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '5px 10px' }}>
                   <span style={{ marginRight: '10px', color: 'var(--p3r-text-muted)', fontSize: '0.9rem' }}>Current Level</span>
-                  <button 
+                  <button
                     style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
-                    onClick={() => setCurrentLevel(Math.max(1, currentLevel - 1))}
+                    onClick={() => { const n = Math.max(1, currentLevel - 1); setCurrentLevel(n); setLevelText(String(n)); }}
                   >-</button>
-                  <input 
-                    type="number" 
-                    value={currentLevel} 
+                  <input
+                    type="number"
+                    value={levelText}
                     onChange={(e) => {
+                      setLevelText(e.target.value);
                       const val = parseInt(e.target.value);
-                      if (!isNaN(val)) setCurrentLevel(Math.min(99, Math.max(1, val)));
+                      if (!isNaN(val) && val >= 1 && val <= 99) {
+                        setCurrentLevel(val);
+                      }
+                    }}
+                    onBlur={() => {
+                      const val = parseInt(levelText);
+                      if (isNaN(val) || val < 1) {
+                        const clamped = 1;
+                        setLevelText(String(clamped));
+                        setCurrentLevel(clamped);
+                      } else if (val > 99) {
+                        setLevelText('99');
+                        setCurrentLevel(99);
+                      } else {
+                        setLevelText(String(currentLevel));
+                      }
                     }}
                     style={{ width: '50px', textAlign: 'center', border: 'none', background: 'transparent', padding: '0', margin: '0 5px' }}
                     min="1" max="99"
                   />
-                  <button 
+                  <button
                     style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
-                    onClick={() => setCurrentLevel(Math.min(99, currentLevel + 1))}
+                    onClick={() => { const n = Math.min(99, currentLevel + 1); setCurrentLevel(n); setLevelText(String(n)); }}
                   >+</button>
                 </div>
                 
@@ -422,14 +468,43 @@ export default function App() {
               />
             </div>
 
-            <button
-              className="flex items-center gap-2"
-              style={{ width: '100%', justifyContent: 'center' }}
-              onClick={() => setSaveBookmarkConfig({ initialPersona: targetPersona, initialSkills: targetSkills.filter(Boolean), initialRequiredPersonas: requiredPersonas })}
-              disabled={!targetPersona}
-            >
-              <BookmarkPlus size={16} /> Save as Bookmark
-            </button>
+            <div style={{ marginTop: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Exclude Personas</h3>
+              <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Hide paths containing these Personas.</span>
+
+              {excludedPersonas.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {excludedPersonas.map(name => (
+                    <span
+                      key={name}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        background: 'rgba(255, 80, 80, 0.15)', border: '1px solid rgba(255, 80, 80, 0.3)',
+                        borderRadius: '4px', padding: '3px 8px', fontSize: '0.85rem',
+                        color: '#ff7777'
+                      }}
+                    >
+                      {name}
+                      <X
+                        size={14}
+                        style={{ cursor: 'pointer', opacity: 0.7 }}
+                        onClick={() => handleRemoveExcludedPersona(name)}
+                      />
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {excludedPersonas.length > 0 && (
+                <button
+                  className="icon-btn"
+                  onClick={handleClearExcludedPersonas}
+                  style={{ fontSize: '0.85rem', padding: '4px 10px', marginBottom: '8px', color: '#ff7777' }}
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
 
             <div style={{ marginTop: '1rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1rem' }}>
               <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Custom Personas</h3>
@@ -461,14 +536,23 @@ export default function App() {
                 </div>
               )}
 
-              <button
-                className="icon-btn"
-                onClick={() => setCustomPersonaModal({ persona: null, skills: [] })}
-                style={{ width: '100%', fontSize: '0.85rem', padding: '6px 12px', border: '1px dashed var(--glass-border)' }}
-              >
-                + Add Custom Persona
-              </button>
+            <button
+              className="icon-btn"
+              onClick={() => setCustomPersonaModal({ persona: null, skills: [] })}
+              style={{ width: '100%', padding: '10px 16px', border: '1px solid var(--glass-border)' }}
+            >
+              + Add Custom Persona
+            </button>
             </div>
+
+            <button
+              className="icon-btn"
+              style={{ width: '100%', marginTop: '8px', padding: '10px 16px', border: '1px solid var(--glass-border)', gap: '6px' }}
+              onClick={() => setSaveBookmarkConfig({ initialPersona: targetPersona, initialSkills: targetSkills.filter(Boolean), initialRequiredPersonas: requiredPersonas })}
+              disabled={!targetPersona}
+            >
+              <BookmarkPlus size={16} /> Save as Bookmark
+            </button>
           </aside>
 
           <main className="glass-panel" style={{ minHeight: '500px' }}>
@@ -515,7 +599,7 @@ export default function App() {
               {pageState === 'results' && (
                 <div>
                   {!isCalculating && sortedPaths && <p className="text-cyan">Found {sortedPaths.length} valid paths.</p>}
-                  <FusionPathViewer paths={sortedPaths} />
+                  <FusionPathViewer paths={sortedPaths} excludedPersonas={excludedPersonas} onExcludePersona={handleAddExcludedPersona} />
                 </div>
               )}
             </div>

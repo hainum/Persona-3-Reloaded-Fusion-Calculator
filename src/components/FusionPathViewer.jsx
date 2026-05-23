@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useTransition, animated } from '@react-spring/web';
+import { X } from 'lucide-react';
 import { personaData } from '../data/DataParser';
 import { getAllRecipes } from '../lib/FusionCalculator';
 import { createPortal } from 'react-dom';
@@ -11,39 +11,28 @@ function getFuseLevel(pData, innateProvided) {
   return learnedLevels.length > 0 ? Math.max(...learnedLevels) : pData.lvl;
 }
 
-export default function FusionPathViewer({ paths }) {
-  const transitions = useTransition(paths || [], {
-    keys: (_item, index) => index,
-    from: { opacity: 0, transform: 'translateY(24px) scale(0.97)' },
-    enter: { opacity: 1, transform: 'translateY(0px) scale(1)' },
-    leave: { opacity: 0, transform: 'translateY(-16px) scale(0.97)' },
-    trail: 80,
-    config: { mass: 1, tension: 280, friction: 28 },
-  });
-
+export default function FusionPathViewer({ paths, excludedPersonas = [], onExcludePersona }) {
   return (
     <div className="fusion-paths-container">
-      {transitions((style, path, _t, index) => (
-        <animated.div style={style}>
-          <div className="path-card" style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '16px'
-          }}>
-            <h3 className="text-cyan" style={{ marginBottom: '12px', fontSize: '1.2rem', borderBottom: '1px solid rgba(0, 229, 255, 0.2)', paddingBottom: '8px' }}>
-              Path {index + 1}
-            </h3>
-            <TreeNode node={path} isRoot={true} />
-          </div>
-        </animated.div>
+      {(paths || []).map((path, index) => (
+        <div key={index} className="path-card" style={{
+          background: 'rgba(0, 0, 0, 0.2)',
+          border: '1px solid var(--glass-border)',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '16px'
+        }}>
+          <h3 className="text-cyan" style={{ marginBottom: '12px', fontSize: '1.2rem', borderBottom: '1px solid rgba(0, 229, 255, 0.2)', paddingBottom: '8px' }}>
+            Path {index + 1}
+          </h3>
+          <TreeNode node={path} isRoot={true} excludedPersonas={excludedPersonas} onExcludePersona={onExcludePersona} />
+        </div>
       ))}
     </div>
   );
 }
 
-function TreeNode({ node, isRoot }) {
+function TreeNode({ node, isRoot, excludedPersonas, onExcludePersona }) {
   const [showRecipes, setShowRecipes] = useState(false);
   const popoverRef = useRef(null);
   const nodeRef = useRef(null);
@@ -105,6 +94,30 @@ function TreeNode({ node, isRoot }) {
               (Lv.{fuseLevel})
             </span>
           </strong>
+          {!isRoot && onExcludePersona && !excludedPersonas.includes(persona) && (
+            <span
+              onClick={(e) => { e.stopPropagation(); onExcludePersona(persona); }}
+              title={`Exclude ${persona} from results`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                marginLeft: '6px', width: '18px', height: '18px', borderRadius: '4px',
+                cursor: 'pointer', fontSize: '0.75rem', lineHeight: 1, opacity: 0.4,
+                background: 'rgba(255,80,80,0.2)', color: '#ff7777',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+            >
+              <X size={12} />
+            </span>
+          )}
+          {!isRoot && excludedPersonas.includes(persona) && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', marginLeft: '6px',
+              fontSize: '0.7rem', color: '#ff7777', opacity: 0.7
+            }}>
+              excluded
+            </span>
+          )}
           {skillsProvided && skillsProvided.length > 0 && (
             <div style={{ fontSize: '0.85rem', marginTop: '4px' }}>
               {skillsProvided.map(skill => {
@@ -181,7 +194,7 @@ function TreeNode({ node, isRoot }) {
                   background: 'var(--p3r-text-muted)'
                 }} />
 
-                <TreeNode node={ing} isRoot={false} />
+                <TreeNode node={ing} isRoot={false} excludedPersonas={excludedPersonas} onExcludePersona={onExcludePersona} />
               </div>
             );
           })}

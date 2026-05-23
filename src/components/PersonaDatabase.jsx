@@ -87,10 +87,13 @@ const FMT_DESC = {
 };
 
 function appendMultiHitStats(skill, desc) {
-  const { hits, accuracy, critRate } = skill;
+  const { elem, hits, accuracy, critRate } = skill;
   if (hits && hits.length === 2 && hits[0] > 0 && !(hits[0] === 1 && hits[1] === 1)) {
     const hitStr = hits[0] === hits[1] ? `${hits[0]}` : `${hits[0]}-${hits[1]}`;
     return `${desc}, ${hitStr} hits, ${accuracy}% acc, ${critRate}% crit`;
+  }
+  if (['sla', 'str', 'pie'].includes(elem) && critRate > 0) {
+    return `${desc}, ${critRate}% crit`;
   }
   return desc;
 }

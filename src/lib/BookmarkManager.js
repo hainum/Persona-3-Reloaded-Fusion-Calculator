@@ -3,7 +3,9 @@ const STORAGE_KEY = 'p3r_bookmarks';
 export function loadBookmarks() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }

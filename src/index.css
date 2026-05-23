@@ -26,6 +26,16 @@ body {
   box-sizing: border-box;
 }
 
+/* Hide native number input spinners (we use custom -/+ buttons) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 /* Glassmorphism Classes */
 .glass-panel {
   background: var(--glass-bg);
@@ -446,8 +456,8 @@ button:disabled {
   to { opacity: 1; transform: translateY(0); }
 }
 .anim-fade-slide-down {
-  animation: fadeSlideDown 0.3s ease;
+  /* animation disabled */
 }
 .anim-fade-up {
-  animation: fadeUp 0.3s ease;
+  /* animation disabled */
 }

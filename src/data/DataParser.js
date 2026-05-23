@@ -73,9 +73,13 @@ for (const entries of Object.values(skillLearnedBy)) {
   });
 }
 
+const canInheritCache = {};
 // Determine if a Persona can inherit a specific skill.
 // Accepts either a skill name (e.g. "Bufu") or a raw element string (e.g. "ice").
 export function canInherit(personaName, skillNameOrElem) {
+  const cacheKey = `${personaName}:${skillNameOrElem}`;
+  if (canInheritCache[cacheKey] !== undefined) return canInheritCache[cacheKey];
+
   // If a known skill name was passed, resolve to its element
   let elem = skillNameOrElem;
   if (skillData[skillNameOrElem]) {
@@ -85,16 +89,25 @@ export function canInherit(personaName, skillNameOrElem) {
   // Passives, Almighty, etc might not be in inheritElems. They are always inheritable unless rank=99
   const elemIndex = inheritElems.indexOf(elem);
   if (elemIndex === -1) {
+    canInheritCache[cacheKey] = true;
     return true; 
   }
   
   const persona = personaData[personaName];
-  if (!persona) return false;
+  if (!persona) {
+    canInheritCache[cacheKey] = false;
+    return false;
+  }
   
   const inheritBits = inheritTypes[persona.inherits];
-  if (!inheritBits) return false;
+  if (!inheritBits) {
+    canInheritCache[cacheKey] = false;
+    return false;
+  }
   
-  return inheritBits[elemIndex];
+  const result = inheritBits[elemIndex];
+  canInheritCache[cacheKey] = result;
+  return result;
 }
 
 // Determine if a specific skill is inherently uninheritable (rank 99)

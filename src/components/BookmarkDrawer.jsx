@@ -17,7 +17,7 @@ export default function BookmarkDrawer({ bookmarks, isOpen, onClose, onLoad, onD
         {bookmarks.length === 0 ? (
           <p className="text-muted" style={{ fontSize: '0.9rem' }}>No bookmarks saved yet.</p>
         ) : (
-          <div className="flex-col gap-2">
+          <div className="flex-col gap-3">
             {[...bookmarks].reverse().map(b => (
               <div
                 key={b.id}

@@ -3,12 +3,22 @@ import { canInherit } from '../data/DataParser.js';
 
 const MAX_DEPTH = 20;
 const MAX_UNIQUE_PATHS = 200;
+const MAX_SEARCH_TIME_MS = 3000;
 const CHUNK_SIZE = 25;
 let cancelled = false;
+
+function pathUsesCustomSkills(path) {
+  if (path.customProvided && path.customProvided.length > 0) return true;
+  for (const ing of path.ingredients) {
+    if (pathUsesCustomSkills(ing)) return true;
+  }
+  return false;
+}
 
 function addPathMetadata(path) {
   path._maxLevel = getPathMaxLevel(path);
   path._nodeCount = getPathNodeCount(path);
+  path._usesCustomSkills = pathUsesCustomSkills(path);
   return path;
 }
 
@@ -22,7 +32,7 @@ self.onmessage = (e) => {
 
   if (type === 'search') {
     cancelled = false;
-    const { targetPersona, targetSkills, requiredPersonas, customPersonaSkills } = payload;
+    const { targetPersona, targetSkills, requiredPersonas, excludedPersonas, customPersonaSkills } = payload;
 
     for (const skill of targetSkills) {
       if (!canInherit(targetPersona, skill)) {
@@ -34,9 +44,14 @@ self.onmessage = (e) => {
     const memo = {};
     const seenPathKeys = new Set();
     let emptyStreak = 0;
+    const searchStartTime = performance.now();
 
     for (let depth = 1; depth <= MAX_DEPTH; depth++) {
       if (cancelled) return;
+      if (performance.now() - searchStartTime > MAX_SEARCH_TIME_MS) {
+        self.postMessage({ type: 'progress', payload: { depth, paths: [] } });
+        break;
+      }
 
       self.postMessage({ type: 'depth_start', payload: { depth } });
 
@@ -44,7 +59,7 @@ self.onmessage = (e) => {
       if (targetSkills.length === 0) {
         pathsAtDepth = generateFusionTrees(targetPersona, depth, memo);
       } else {
-        pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo, customPersonaSkills);
+        pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo, customPersonaSkills, targetPersona);
       }
 
       if (requiredPersonas && requiredPersonas.length > 0) {
@@ -54,9 +69,17 @@ self.onmessage = (e) => {
         });
       }
 
+      if (excludedPersonas && excludedPersonas.length > 0) {
+        pathsAtDepth = pathsAtDepth.filter(p => {
+          const namesInPath = getPathPersonaNames(p);
+          return !excludedPersonas.some(name => namesInPath.has(name));
+        });
+      }
+
       const newUniquePaths = [];
       for (const p of pathsAtDepth) {
-        const key = JSON.stringify([...getPathPersonaNames(p)].sort());
+        const names = getPathPersonaNames(p);
+        const key = [...names].sort().join(',');
         if (!seenPathKeys.has(key)) {
           seenPathKeys.add(key);
           newUniquePaths.push(addPathMetadata(p));

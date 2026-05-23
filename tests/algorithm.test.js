@@ -302,27 +302,47 @@ function getInnateSkills(personaName) {
 function distributeSkills(skills, numBuckets) {
   if (skills.length === 0) return [Array.from({length: numBuckets}, () => [])];
   const restDistributions = distributeSkills(skills.slice(1), numBuckets);
-  const result = []; const skill = skills[0];
-  for (const dist of restDistributions) {
+  const result = [];
+  const skill = skills[0];
+  for (let d = 0; d < restDistributions.length; d++) {
+    const dist = restDistributions[d];
     for (let i = 0; i < numBuckets; i++) {
-      const newDist = dist.map(arr => [...arr]); newDist[i].push(skill); result.push(newDist);
+      const newDist = new Array(numBuckets);
+      for (let j = 0; j < numBuckets; j++) {
+        if (j === i) {
+          const copy = dist[j];
+          const len = copy.length;
+          const arr = new Array(len + 1);
+          for (let k = 0; k < len; k++) arr[k] = copy[k];
+          arr[len] = skill;
+          newDist[j] = arr;
+        } else {
+          newDist[j] = dist[j];
+        }
+      }
+      result.push(newDist);
     }
   }
   return result;
 }
 
-function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSkills) {
-  const memoKey = `${personaName}:${requiredSkills.sort().join(',')}:${maxDepth}`;
+function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSkills, targetPersonaName) {
+  const skillsCopy = [...requiredSkills].sort();
+  const memoKey = `${personaName}:${skillsCopy.join(',')}:${maxDepth}`;
   if (memo[memoKey]) return memo[memoKey];
-  if (!requiredSkills.every(s => canInherit(personaName, s))) { memo[memoKey] = []; return []; }
   const innate = getInnateSkills(personaName);
   const extra = (customPersonaSkills && customPersonaSkills[personaName]) || [];
-  const provided = [...innate, ...extra];
-  const stillRequired = requiredSkills.filter(s => !provided.includes(s));
+  const hasCustomEntry = customPersonaSkills && customPersonaSkills[personaName] !== undefined;
+  const provided = innate.concat(extra);
+  const stillRequired = skillsCopy.filter(s => !provided.includes(s));
+  if (!stillRequired.every(s => canInherit(personaName, s))) { memo[memoKey] = []; return []; }
+  const innateProvidedInCall = skillsCopy.filter(s => innate.includes(s));
+  const customProvidedInCall = skillsCopy.filter(s => extra.includes(s));
   if (stillRequired.length === 0) {
-    const res = [{ persona: personaName, skillsProvided: requiredSkills, innateProvided: requiredSkills.filter(s => innate.includes(s)), ingredients: [] }];
+    const res = [{ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: [] }];
     memo[memoKey] = res; return res;
   }
+  if (hasCustomEntry && personaName !== targetPersonaName) { memo[memoKey] = []; return []; }
   if (maxDepth === 0) { memo[memoKey] = []; return []; }
   const recipes = getAllRecipes(personaName); const validPaths = [];
   for (const recipe of recipes) {
@@ -333,13 +353,13 @@ function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSk
       for (let i = 0; i < ingredients.length; i++) {
         const ing = ingredients[i]; const assignedReqs = assignment[i];
         let childPaths;
-        if (assignedReqs.length === 0) { childPaths = [{ persona: ing, skillsProvided: [], innateProvided: [], ingredients: [] }]; }
-        else { childPaths = searchTree(ing, assignedReqs, maxDepth - 1, memo, customPersonaSkills); }
+        if (assignedReqs.length === 0) { childPaths = [{ persona: ing, skillsProvided: [], innateProvided: [], customProvided: [], ingredients: [] }]; }
+        else { childPaths = searchTree(ing, assignedReqs, maxDepth - 1, memo, customPersonaSkills, targetPersonaName); }
         if (childPaths.length === 0) { isAssignmentValid = false; break; }
         childPathsCombo.push(childPaths[0]);
       }
       if (isAssignmentValid) {
-        validPaths.push({ persona: personaName, skillsProvided: requiredSkills, innateProvided: requiredSkills.filter(s => innate.includes(s)), ingredients: childPathsCombo });
+        validPaths.push({ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: childPathsCombo });
       }
     }
   }
@@ -352,7 +372,8 @@ function getPathMaxLevel(path) {
   return max;
 }
 
-function getPathPersonaNames(path, names = new Set()) {
+function getPathPersonaNames(path, names) {
+  if (!names) names = new Set();
   names.add(path.persona);
   for (const ing of path.ingredients) getPathPersonaNames(ing, names);
   return names;
@@ -364,6 +385,14 @@ function getPathNodeCount(path) {
   return count;
 }
 
+function pathUsesCustomSkills(path) {
+  if (path.customProvided && path.customProvided.length > 0) return true;
+  for (const ing of path.ingredients) {
+    if (pathUsesCustomSkills(ing)) return true;
+  }
+  return false;
+}
+
 function generateFusionTrees(personaName, maxDepth, memo) {
   if (maxDepth <= 0) return [];
   const memoKey = `gen:${personaName}:${maxDepth}`;
@@ -373,9 +402,9 @@ function generateFusionTrees(personaName, maxDepth, memo) {
     const ingredientNodes = recipe.ingredients.map(ing => {
       const childTrees = generateFusionTrees(ing, maxDepth - 1, memo);
       if (childTrees.length > 0) return childTrees[0];
-      return { persona: ing, skillsProvided: [], innateProvided: [], ingredients: [] };
+      return { persona: ing, skillsProvided: [], innateProvided: [], customProvided: [], ingredients: [] };
     });
-    results.push({ persona: personaName, skillsProvided: [], innateProvided: [], ingredients: ingredientNodes });
+    results.push({ persona: personaName, skillsProvided: [], innateProvided: [], customProvided: [], ingredients: ingredientNodes });
   }
   memo[memoKey] = results; return results;
 }
@@ -383,11 +412,17 @@ function generateFusionTrees(personaName, maxDepth, memo) {
 function addPathMetadata(path) {
   path._maxLevel = getPathMaxLevel(path);
   path._nodeCount = getPathNodeCount(path);
+  path._usesCustomSkills = pathUsesCustomSkills(path);
   return path;
 }
 
+function getPathKey(path) {
+  const names = getPathPersonaNames(path);
+  return [...names].sort().join(',');
+}
+
 // Accumulate unique paths across depths (mirrors the worker's approach)
-function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel = 99, requiredPersonas = null, customPersonaSkills = null) {
+function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel = 99, requiredPersonas = null, customPersonaSkills = null, excludedPersonas = null) {
   for (const skill of targetSkills) {
     if (!canInherit(targetPersona, skill)) {
       return { error: `Persona ${targetPersona} cannot inherit skill ${skill}.` };
@@ -401,7 +436,7 @@ function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel
     if (targetSkills.length === 0) {
       pathsAtDepth = generateFusionTrees(targetPersona, depth, memo);
     } else {
-      pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo, customPersonaSkills);
+      pathsAtDepth = searchTree(targetPersona, targetSkills, depth, memo, customPersonaSkills, targetPersona);
     }
     if (requiredPersonas && requiredPersonas.length > 0) {
       pathsAtDepth = pathsAtDepth.filter(p => {
@@ -409,8 +444,14 @@ function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel
         return requiredPersonas.every(name => namesInPath.has(name));
       });
     }
+    if (excludedPersonas && excludedPersonas.length > 0) {
+      pathsAtDepth = pathsAtDepth.filter(p => {
+        const namesInPath = getPathPersonaNames(p);
+        return !excludedPersonas.some(name => namesInPath.has(name));
+      });
+    }
     for (const p of pathsAtDepth) {
-      const key = JSON.stringify([...getPathPersonaNames(p)].sort());
+      const key = getPathKey(p);
       if (!seenPathKeys.has(key)) {
         seenPathKeys.add(key);
         allPaths.push(addPathMetadata(p));
@@ -424,7 +465,10 @@ function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel
     if (!aPossible && bPossible) return 1;
     const nodesA = a._nodeCount; const nodesB = b._nodeCount;
     if (nodesA !== nodesB) return nodesA - nodesB;
-    return maxA - maxB;
+    if (maxA !== maxB) return maxA - maxB;
+    if (a._usesCustomSkills && !b._usesCustomSkills) return -1;
+    if (!a._usesCustomSkills && b._usesCustomSkills) return 1;
+    return 0;
   });
   return { paths: allPaths, error: null };
 }
@@ -681,7 +725,119 @@ console.log('\n── Custom Persona Search ──');
   assert(!r2.error, 'null customPersonaSkills: no error');
 }
 
-// ── 10. SP Cost Decoding ────────────────────────────────────────
+// ── 10b. Custom Persona — multiple skills, deep paths ──────────
+
+console.log('\n── Custom Persona — Multiple Skills ──');
+{
+  // Custom persona provides 2 skills — should reduce depth needs
+  const memo = {};
+  const paths = searchTree('Orpheus', ['Dia', 'Patra'], 1, memo, { Orpheus: ['Dia', 'Patra'] });
+  assert(paths.length > 0, 'Custom 2 skills on Orpheus: found at depth 1');
+  if (paths.length > 0) {
+    assert(paths[0].customProvided.length === 2, 'Custom 2 skills: customProvided has 2 entries');
+  }
+
+  // Custom persona on intermediate node only (not target)
+  // If Lilim has custom skills, Orpheus path depth 2 should work
+  const memo2 = {};
+  const paths2 = searchTree('Orpheus', ['Dia', 'Bufu'], 2, memo2, { Lilim: ['Bufu'] });
+  assert(paths2.length > 0, 'Custom skills on intermediate persona: paths found');
+  if (paths2.length > 0) {
+    assert(paths2[0].ingredients.length === 2, 'Custom intermediate: has 2 ingredients');
+  }
+}
+
+// ── 10c. Excluded Personas Filter ──────────────────────────────
+
+console.log('\n── Excluded Personas Filter ──');
+{
+  // Basic exclusion — filter out paths containing Rakshasa
+  const withRakshasa = findFusionPaths('Jikokuten', ['Counter'], 2, 99, null);
+  const withoutRakshasa = findFusionPaths('Jikokuten', ['Counter'], 2, 99, null, null, ['Rakshasa']);
+  assert(!withoutRakshasa.error, 'Exclude Rakshasa: no error');
+  assert(withoutRakshasa.paths.length > 0, 'Exclude Rakshasa: paths still found');
+  assert(withRakshasa.paths.length > withoutRakshasa.paths.length,
+    'Exclude Rakshasa: fewer paths than unfiltered');
+  if (withoutRakshasa.paths.length > 0) {
+    assert(!getPathPersonaNames(withoutRakshasa.paths[0]).has('Rakshasa'),
+      'Exclude Rakshasa: first path does not contain Rakshasa');
+  }
+
+  // Excluding root persona should yield zero paths
+  const excludeRoot = findFusionPaths('Jikokuten', ['Counter'], 2, 99, null, null, ['Jikokuten']);
+  assert(excludeRoot.paths.length === 0, 'Exclude root: 0 paths (root is always in path)');
+
+  // Excluding nonexistent persona = no effect
+  const excludeFake = findFusionPaths('Jikokuten', ['Counter'], 2, 99, null, null, ['FAKE']);
+  assert(excludeFake.paths.length === withRakshasa.paths.length,
+    'Exclude nonexistent: same count as unfiltered');
+
+  // Exclude + require same persona = zero paths
+  const conflict = findFusionPaths('Jikokuten', ['Counter'], 2, 99, ['Rakshasa'], null, ['Rakshasa']);
+  assert(conflict.paths.length === 0, 'Exclude + require same persona: 0 paths');
+
+  // Multiple exclusions
+  const multiExclude = findFusionPaths('Jikokuten', ['Counter'], 2, 99, null, null, ['Rakshasa', 'Yomotsu Shikome']);
+  assert(multiExclude.paths.length > 0, 'Multiple exclusions: paths found');
+  assert(multiExclude.paths.length <= withoutRakshasa.paths.length,
+    'Multiple exclusions: at most as many paths as single exclusion');
+
+  // null excludedPersonas = no filter
+  const a = findFusionPaths('Jikokuten', ['Counter'], 2, 99, null, null, null);
+  const b = findFusionPaths('Jikokuten', ['Counter'], 2, 99);
+  assert(a.paths.length === b.paths.length, 'null excludedPersonas: same as no filter');
+}
+
+// ── 10d. Forward Fusions (getForwardFusions) ──────────────────
+
+console.log('\n── Forward Fusions ──');
+{
+  // getForwardFusions is imported from FusionCalculator, so we test the real export
+  // Since it's not replicated inline, we import it directly
+  const FusionCalc = await import('../src/lib/FusionCalculator.js');
+
+  // Jikokuten should appear as an ingredient in some fusions
+  const fwd = FusionCalc.getForwardFusions('Jikokuten');
+  assert(Array.isArray(fwd), 'Forward fusions: returns array');
+  assert(fwd.length > 0, 'Forward fusions: Jikokuten has forward fusions');
+  if (fwd.length > 0) {
+    assert(typeof fwd[0].result === 'string' && fwd[0].result.length > 0,
+      'Forward fusions: result is a persona name');
+    assert(Array.isArray(fwd[0].otherIngredients),
+      'Forward fusions: otherIngredients is array');
+    assert(typeof fwd[0].isSpecial === 'boolean',
+      'Forward fusions: isSpecial is boolean');
+  }
+
+  // Unknown persona returns empty array
+  const unknown = FusionCalc.getForwardFusions('__NONEXISTENT__');
+  assert(Array.isArray(unknown) && unknown.length === 0,
+    'Forward fusions: unknown persona returns []');
+
+  // Each forward fusion's result is a real persona
+  for (const ff of fwd) {
+    assert(personaData[ff.result] !== undefined,
+      `Forward fusions: result "${ff.result}" exists in personaData`);
+  }
+}
+
+// ── 10e. isSkillInheritable — non-inheritable skills ──────────
+
+console.log('\n── Non-inheritable Skills ──');
+{
+  // Skills with rank >= 99 are non-inheritable
+  assert(!isSkillInheritable('Cadenza'), 'Cadenza (theurgy): non-inheritable');
+  assert(!isSkillInheritable('Armageddon'), 'Armageddon (theurgy): non-inheritable');
+
+  // Common inheritable skills
+  assert(isSkillInheritable('Counter'), 'Counter: inheritable');
+  assert(isSkillInheritable('Agilao'), 'Agilao: inheritable');
+
+  // Non-existent skill
+  assert(!isSkillInheritable('__NONEXISTENT__'), 'Nonexistent skill: non-inheritable');
+}
+
+// ── 10f. SP Cost Decoding ────────────────────────────────────────
 
 console.log('\n── SP Cost Decoding ──');
 {
