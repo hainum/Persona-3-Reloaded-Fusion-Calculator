@@ -89,6 +89,18 @@ The app follows a **strict layered architecture**:
 - Controlled component: receives `value`, `onChange`, `options`.
 - Auto-selects single result on Enter press.
 
+### Typography — P3R Font Map
+
+The app uses three Google Fonts chosen to match P3R's commercial Fontworks stack:
+
+| P3R Font | Role | Google Font | Characteristics |
+|----------|------|-------------|-----------------|
+| Skip STD B | Main UI (headings, emphasis) | Bricolage Grotesque | Expressive geometric, playful personality |
+| New Rodin Pro M | Body text | Space Grotesk | Clean geometric, technical edge, readable |
+| BM Space | Decorative / monospace | Space Mono | Fixed-width, sci-fi, derived from same family |
+
+Defined in `src/index.css` as `--font-heading`, `--font-body`, `--font-mono`.
+
 ### `src/components/FusionPathViewer.jsx`
 
 - Renders an array of fusion path trees.

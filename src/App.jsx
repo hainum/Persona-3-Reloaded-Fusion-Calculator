@@ -419,17 +419,18 @@ export default function App() {
           <aside className="glass-panel flex-col gap-4">
             <h2>Configuration</h2>
             
-            <SearchableSelect 
+            <SearchableSelect
               label="Target Persona"
               placeholder="Select Persona..."
               options={personaOptions}
               value={targetPersona}
               onChange={setTargetPersona}
+              noMargin
             />
 
-            <div>
+            <div style={{ marginTop: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '0.5rem' }}>
-                <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Target Skills</h3>
+                <h3 style={{ fontSize: '0.95rem', margin: 0 }}>Target Skills</h3>
                 {targetPersona && (
                   <span style={{ fontSize: '0.8rem', color: 'var(--p3r-text-muted)' }}>
                     {targetSkills.length}/{getMaxInheritedSkills(targetPersona)} skills
@@ -478,8 +479,8 @@ export default function App() {
               )}
             </div>
 
-            <div style={{ marginTop: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Include Personas</h3>
+            <div style={{ marginTop: '1rem' }}>
+              <h3 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Include Personas</h3>
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Only show paths containing these Personas.</span>
               
               {requiredPersonas.length > 0 && (
@@ -512,8 +513,8 @@ export default function App() {
               />
             </div>
 
-            <div style={{ marginTop: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Exclude Personas</h3>
+            <div style={{ marginTop: '1rem' }}>
+              <h3 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Exclude Personas</h3>
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Hide paths containing these Personas.</span>
 
               {excludedPersonas.length > 0 && (
@@ -551,7 +552,7 @@ export default function App() {
             </div>
 
             <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1rem' }}>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Custom Personas</h3>
+              <h3 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Custom Personas</h3>
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
                 Define personas with extra skills for inheritance.
               </span>
@@ -735,8 +736,9 @@ function RequiredPersonaSearch({ personaOptions, excludeNames, onSelect }) {
     <div ref={wrapperRef} style={{ position: 'relative' }}>
       <div className="input-wrapper">
         <Search size={14} style={{ color: 'var(--p3r-text-muted)', marginRight: '8px', flexShrink: 0 }} />
-        <input 
+        <input
           type="text"
+          style={{ fontSize: '0.85rem' }}
           placeholder="Search persona to add..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setIsOpen(true); setHighlightedIndex(-1); }}
@@ -839,7 +841,7 @@ function SkillSearch({ skillOptions, selectedSkills, onSelect, isFull }) {
             type="text"
             placeholder="Max skills reached"
             disabled
-            style={{ background: 'transparent', border: 'none', padding: '0', flex: 1, color: 'var(--p3r-text-muted)', outline: 'none', cursor: 'not-allowed' }}
+            style={{ background: 'transparent', border: 'none', padding: '0', flex: 1, color: 'var(--p3r-text-muted)', outline: 'none', cursor: 'not-allowed', fontSize: '0.85rem' }}
           />
         </div>
       ) : (
@@ -847,6 +849,7 @@ function SkillSearch({ skillOptions, selectedSkills, onSelect, isFull }) {
           <Search size={14} style={{ color: 'var(--p3r-text-muted)', marginRight: '8px', flexShrink: 0 }} />
           <input
             type="text"
+            style={{ fontSize: '0.85rem' }}
             placeholder="Search skill to add..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setIsOpen(true); setHighlightedIndex(-1); }}
