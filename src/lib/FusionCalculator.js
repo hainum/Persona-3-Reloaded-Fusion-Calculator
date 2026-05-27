@@ -1,4 +1,4 @@
-import { personaData, fusionChart, specialRecipes, canInherit } from '../data/DataParser.js';
+import { personaData, fusionChart, specialRecipes, canInherit, getMaxInheritedSkills } from '../data/DataParser.js';
 
 // Precompute lists for fast lookups
 const arcanaPersonas = {};
@@ -27,14 +27,6 @@ for (const p of Object.values(personaData)) {
 const innateSkillsMap = {};
 for (const p of Object.values(personaData)) {
   innateSkillsMap[p.name] = Object.keys(p.skills);
-}
-
-const ORPHEUS_TELOS = 'Orpheus Telos';
-
-export function getMaxInheritedSkills(personaName) {
-  if (personaName === ORPHEUS_TELOS) return 8;
-  if (specialRecipeResults.has(personaName)) return 5;
-  return 4;
 }
 
 function getResultRace(raceA, raceB) {

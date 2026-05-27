@@ -1,23 +1,18 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import SearchableSelect from './components/SearchableSelect';
-import FusionPathViewer from './components/FusionPathViewer';
+import SearchResultsPanel from './components/SearchResultsPanel';
 import PersonaDatabase from './components/PersonaDatabase';
 import BookmarkDrawer from './components/BookmarkDrawer';
 import { SaveBookmarkModal } from './components/BookmarkModal';
 import CustomPersonaModal from './components/CustomPersonaModal';
-import { personaData, skillData, isSkillInheritable, canInherit } from './data/DataParser';
-import { loadBookmarks, saveBookmarks, createBookmark, findMatchingBookmark } from './lib/BookmarkManager';
-import { getMaxInheritedSkills } from './lib/FusionCalculator';
+import { personaData, skillData, isSkillInheritable, canInherit, getMaxInheritedSkills } from './data/DataParser';
+import { loadBookmarks, saveBookmarks, createBookmark } from './lib/BookmarkManager';
 import { Zap, Search, X, Calculator, Database, Bookmark, BookmarkPlus, AlertTriangle } from 'lucide-react';
 
 export default function App() {
   const [view, setView] = useState('calculator');
   const [targetPersona, setTargetPersona] = useState('');
   const [targetSkills, setTargetSkills] = useState([]);
-  const [paths, setPaths] = useState(null);
-  const [error, setError] = useState(null);
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [currentSearchDepth, setCurrentSearchDepth] = useState(0);
   const [requiredPersonas, setRequiredPersonas] = useState([]);
   const [excludedPersonas, setExcludedPersonas] = useState([]);
   const [currentLevel, setCurrentLevel] = useState(() => {
@@ -31,15 +26,14 @@ export default function App() {
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
-  const [customPersonaModal, setCustomPersonaModal] = useState(null); // { persona?, skills? } or null
+  const [customPersonaModal, setCustomPersonaModal] = useState(null);
   const [bookmarkDrawerOpen, setBookmarkDrawerOpen] = useState(false);
   const [saveBookmarkConfig, setSaveBookmarkConfig] = useState(null);
-  const workerRef = useRef(null);
-  const workerHealthyRef = useRef(true);
-  const currentLevelRef = useRef(currentLevel);
-  const searchTimeoutRef = useRef(null);
+  const [searchKey, setSearchKey] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   const [levelText, setLevelText] = useState(String(currentLevel));
+  const searchTimeoutRef = useRef(null);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -51,7 +45,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    currentLevelRef.current = currentLevel;
     localStorage.setItem('p3r_currentLevel', currentLevel);
   }, [currentLevel]);
 
@@ -73,66 +66,6 @@ export default function App() {
     localStorage.setItem('p3r_custom_personas', JSON.stringify(customPersonas));
   }, [customPersonas]);
 
-  const sortPaths = (pathsList, level) => {
-    return [...pathsList].sort((a, b) => {
-      const aPossible = a._maxLevel <= level;
-      const bPossible = b._maxLevel <= level;
-      if (aPossible && !bPossible) return -1;
-      if (!aPossible && bPossible) return 1;
-      if (a._nodeCount !== b._nodeCount) return a._nodeCount - b._nodeCount;
-      if (a._maxLevel !== b._maxLevel) return a._maxLevel - b._maxLevel;
-      if (a._usesCustomSkills && !b._usesCustomSkills) return -1;
-      if (!a._usesCustomSkills && b._usesCustomSkills) return 1;
-      return 0;
-    });
-  };
-
-  const createWorker = () => {
-    const w = new Worker(new URL('./workers/fusionSearch.worker.js', import.meta.url), { type: 'module' });
-    w.onmessage = (e) => {
-      const { type, payload } = e.data;
-      if (type === 'progress') {
-        setPaths(prev => prev ? [...prev, ...payload.paths] : [...payload.paths]);
-        setCurrentSearchDepth(payload.depth);
-      } else if (type === 'depth_start') {
-        setCurrentSearchDepth(payload.depth);
-      } else if (type === 'done') {
-        setPaths(prev => prev ?? []);
-        setIsCalculating(false);
-      } else if (type === 'error') {
-        setPaths(null);
-        setError(payload.message);
-        setIsCalculating(false);
-      }
-    };
-    w.onerror = () => {
-      workerHealthyRef.current = false;
-      setPaths(null);
-      setIsCalculating(false);
-      setError('Worker encountered an error. Please try again.');
-    };
-    return w;
-  };
-
-  useEffect(() => {
-    if (!workerRef.current || !workerHealthyRef.current) {
-      if (workerRef.current) workerRef.current.terminate();
-      workerRef.current = createWorker();
-      workerHealthyRef.current = true;
-    }
-    return () => {
-      if (workerRef.current) {
-        workerRef.current.terminate();
-        workerRef.current = null;
-      }
-    };
-  }, []);
-
-  const matchingBookmark = useMemo(() => {
-    if (view !== 'calculator') return null;
-    return findMatchingBookmark({ targetPersona, targetSkills, requiredPersonas }, bookmarks);
-  }, [view, targetPersona, targetSkills, requiredPersonas, bookmarks]);
-
   const handleSaveBookmark = (config) => {
     const bookmark = createBookmark(config);
     setBookmarks(prev => [...prev, bookmark]);
@@ -153,25 +86,11 @@ export default function App() {
   };
 
   const handleLoadBookmark = (b) => {
-    cancelSearch();
     setView('calculator');
     setTargetPersona(b.targetPersona);
     setTargetSkills([...b.targetSkills]);
     setRequiredPersonas(b.requiredPersonas);
-    setPaths(null);
-    setError(null);
   };
-
-  const sortedPaths = useMemo(() => {
-    return paths ? sortPaths(paths, currentLevel) : null;
-  }, [paths, currentLevel]);
-
-  const pageState = useMemo(() => {
-    if (isCalculating) return 'searching';
-    if (sortedPaths && sortedPaths.length === 0) return 'no-paths';
-    if (sortedPaths && sortedPaths.length > 0) return 'results';
-    return 'idle';
-  }, [isCalculating, sortedPaths]);
 
 
 
@@ -243,60 +162,6 @@ export default function App() {
     });
   };
 
-  const cancelSearch = () => {
-    const w = workerRef.current;
-    if (w && workerHealthyRef.current) {
-      w.postMessage({ type: 'cancel' });
-    }
-  };
-
-  useEffect(() => {
-    if (view !== 'calculator') {
-      cancelSearch();
-    }
-  }, [view]);
-
-  const handleCalculate = () => {
-    if (!targetPersona) {
-      cancelSearch();
-      setPaths(null);
-      setError(null);
-      setCurrentSearchDepth(0);
-      setIsCalculating(false);
-      return;
-    }
-    cancelSearch();
-    setPaths(null);
-    setError(null);
-    setCurrentSearchDepth(0);
-    setIsCalculating(true);
-
-    if (!workerRef.current || !workerHealthyRef.current) {
-      if (workerRef.current) workerRef.current.terminate();
-      workerRef.current = createWorker();
-      workerHealthyRef.current = true;
-    }
-    const w = workerRef.current;
-    const activeSkills = targetSkills;
-    w.postMessage({
-      type: 'search',
-      payload: {
-        targetPersona,
-        targetSkills: activeSkills,
-        currentLevel,
-        requiredPersonas: requiredPersonas.length > 0 ? requiredPersonas : null,
-        excludedPersonas: excludedPersonas.length > 0 ? excludedPersonas : null,
-        customPersonaSkills: Object.keys(customPersonas).length > 0 ? customPersonas : null,
-      }
-    });
-  };
-
-  const handleCalculateRef = useRef(handleCalculate);
-  useEffect(() => {
-    handleCalculateRef.current = handleCalculate;
-  });
-
-  const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -304,7 +169,7 @@ export default function App() {
     }
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      handleCalculateRef.current();
+      setSearchKey(k => k + 1);
     }, 200);
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -600,55 +465,18 @@ export default function App() {
             </button>
           </aside>
 
-          <main className="glass-panel" style={{ minHeight: '500px' }}>
-            <div className="flex justify-between items-center" style={{ marginBottom: '1rem' }}>
-              <h2 style={{ margin: 0 }}>Fusion Paths</h2>
-              {matchingBookmark && (
-                <span className="bookmark-tag">
-                  <Bookmark size={14} /> {matchingBookmark.name}
-                  <span
-                    className="del"
-                    onClick={() => handleDeleteBookmark(matchingBookmark.id)}
-                    title="Delete bookmark"
-                  >
-                    <X size={14} />
-                  </span>
-                </span>
-              )}
-            </div>
-            
-            {error && (
-              <div className="anim-fade-slide-down" style={{ background: 'rgba(255, 50, 50, 0.2)', padding: '15px', borderRadius: '8px', border: '1px solid #ff4444', color: '#ffaaaa' }}>
-                <strong>Error: </strong> {error}
-              </div>
-            )}
-
-            <div key={pageState} className="anim-fade-up">
-              {pageState === 'idle' && (
-                <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
-                  Select a Target Persona and desired skills to see fusion paths.
-                </div>
-              )}
-              {pageState === 'searching' && (
-                <div className="text-cyan" style={{ textAlign: 'center', marginTop: '4rem' }}>
-                  Searching the Sea of Souls... 
-                  {currentSearchDepth > 0 && ` (Depth ${currentSearchDepth})`}
-                  {sortedPaths && <span> Found {sortedPaths.length} paths so far...</span>}
-                </div>
-              )}
-              {pageState === 'no-paths' && (
-                <div className="text-muted" style={{ textAlign: 'center', marginTop: '4rem' }}>
-                  No valid paths found. Try different skills or a different target persona.
-                </div>
-              )}
-              {pageState === 'results' && (
-                <div>
-                  {!isCalculating && sortedPaths && <p className="text-cyan">Found {sortedPaths.length} valid paths.</p>}
-                  <FusionPathViewer paths={sortedPaths} excludedPersonas={excludedPersonas} onExcludePersona={handleAddExcludedPersona} />
-                </div>
-              )}
-            </div>
-          </main>
+          <SearchResultsPanel
+            searchKey={searchKey}
+            targetPersona={targetPersona}
+            targetSkills={targetSkills}
+            requiredPersonas={requiredPersonas}
+            excludedPersonas={excludedPersonas}
+            currentLevel={currentLevel}
+            customPersonas={customPersonas}
+            bookmarks={bookmarks}
+            onDeleteBookmark={handleDeleteBookmark}
+            onAddExcludedPersona={handleAddExcludedPersona}
+          />
         </div>
       ) : (
         <PersonaDatabase

@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import { generateBookmarkName } from '../lib/BookmarkManager';
-import { getMaxInheritedSkills } from '../lib/FusionCalculator';
-import { canInherit } from '../data/DataParser';
+import { canInherit, getMaxInheritedSkills } from '../data/DataParser';
 
 export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequiredPersonas, personaOptions, skillOptions, onSave, onClose }) {
   const [targetPersona, setTargetPersona] = useState(initialPersona || '');

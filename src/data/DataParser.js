@@ -74,6 +74,15 @@ for (const entries of Object.values(skillLearnedBy)) {
   });
 }
 
+const specialRecipeResultsSet = new Set(Object.keys(specialRecipesRaw));
+const ORPHEUS_TELOS = 'Orpheus Telos';
+
+function getMaxInheritedSkills(personaName) {
+  if (personaName === ORPHEUS_TELOS) return 8;
+  if (specialRecipeResultsSet.has(personaName)) return 5;
+  return 4;
+}
+
 const canInheritCache = {};
 // Determine if a Persona can inherit a specific skill.
 // Accepts either a skill name (e.g. "Bufu") or a raw element string (e.g. "ice").
@@ -126,5 +135,8 @@ export {
   fusionChartRaw as fusionChart,
   specialRecipesRaw as specialRecipes,
   compConfigRaw as compConfig,
-  unlockRequirementsRaw as unlockRequirements
+  unlockRequirementsRaw as unlockRequirements,
+  specialRecipeResultsSet,
+  ORPHEUS_TELOS,
+  getMaxInheritedSkills
 };

@@ -1,6 +1,5 @@
 import { Bookmark, Trash2, X, AlertTriangle } from 'lucide-react';
-import { canInherit } from '../data/DataParser';
-import { getMaxInheritedSkills } from '../lib/FusionCalculator';
+import { canInherit, getMaxInheritedSkills } from '../data/DataParser';
 
 export default function BookmarkDrawer({ bookmarks, isOpen, onClose, onLoad, onDelete }) {
   return (
