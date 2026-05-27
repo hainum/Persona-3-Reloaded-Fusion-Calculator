@@ -175,12 +175,12 @@ export function AddSkillToBookmarkModal({ skillName, bookmarks, onAdd, onClose }
   return (
     <>
       <div className="modal-overlay open" onClick={onClose} />
-      <div className="modal-content flex-col gap-3">
+      <div className="modal-content flex-col gap-4">
         <div className="flex justify-between items-center">
           <h3 style={{ margin: 0, fontSize: '1.3rem' }}>Add to Bookmark</h3>
           <button onClick={onClose} className="icon-btn"><X size={18} /></button>
         </div>
-        <p className="text-muted" style={{ fontSize: '0.9rem', margin: 0 }}>
+        <p className="text-muted" style={{ fontSize: '0.9rem', margin: 0, marginBottom: '12px' }}>
           Select a bookmark to add <strong>{skillName}</strong>:
         </p>
         {bookmarks.length === 0 ? (
@@ -198,7 +198,7 @@ export function AddSkillToBookmarkModal({ skillName, bookmarks, onAdd, onClose }
                   key={b.id}
                   className="bookmark-item"
                   onClick={() => { if (!isDisabled) { onAdd(b.id, skillName); onClose(); } }}
-                  style={{ opacity: isDisabled ? 0.5 : 1, cursor: isDisabled ? 'default' : 'pointer' }}
+                  style={{ opacity: isDisabled ? 0.5 : 1, cursor: isDisabled ? 'default' : 'pointer', marginBottom: '8px' }}
                 >
                   <div className="flex-col" style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{b.name}</div>
@@ -214,7 +214,7 @@ export function AddSkillToBookmarkModal({ skillName, bookmarks, onAdd, onClose }
             })}
           </div>
         )}
-        <button onClick={onClose} style={{ alignSelf: 'flex-end' }}>Cancel</button>
+        <button onClick={onClose} style={{ alignSelf: 'flex-end', marginTop: '8px' }}>Cancel</button>
       </div>
     </>
   );
