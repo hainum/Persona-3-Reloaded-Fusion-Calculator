@@ -219,8 +219,8 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
   if (!pData) return null;
 
   return (
-    <div className="flex-col gap-6">
-      <button className="btn-outline flex items-center gap-2" onClick={onBack} style={{ alignSelf: 'flex-start', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', padding: '6px 14px' }}>
+      <div className="flex-col gap-4">
+      <button className="btn-outline flex items-center gap-2" onClick={onBack} style={{ alignSelf: 'flex-start', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', padding: '6px 14px', marginBottom: '1rem' }}>
         <ArrowLeft size={16} /> Back to Persona List
       </button>
 
