@@ -29,6 +29,14 @@ for (const p of Object.values(personaData)) {
   innateSkillsMap[p.name] = Object.keys(p.skills);
 }
 
+const ORPHEUS_TELOS = 'Orpheus Telos';
+
+export function getMaxInheritedSkills(personaName) {
+  if (personaName === ORPHEUS_TELOS) return 8;
+  if (specialRecipeResults.has(personaName)) return 5;
+  return 4;
+}
+
 function getResultRace(raceA, raceB) {
   const races = fusionChart.races;
   const idxA = races.indexOf(raceA);
@@ -191,6 +199,11 @@ export function searchTree(personaName, requiredSkills, maxDepth, memo, customPe
     return [];
   }
 
+  if (stillRequired.length > getMaxInheritedSkills(personaName)) {
+    memo[memoKey] = [];
+    return [];
+  }
+
   const innateProvidedInCall = skillsCopy.filter(s => innate.includes(s));
   const customProvidedInCall = skillsCopy.filter(s => extra.includes(s));
 
@@ -346,6 +359,11 @@ export function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, curre
     if (!canInherit(targetPersona, skill)) {
       return { error: `Persona ${targetPersona} cannot inherit skill ${skill}.` };
     }
+  }
+
+  const maxSlots = getMaxInheritedSkills(targetPersona);
+  if (targetSkills.length > maxSlots) {
+    return { error: `Persona ${targetPersona} can only inherit ${maxSlots} skills via fusion (requested ${targetSkills.length}). Excess skills require Skill Cards.` };
   }
 
   const memo = {};

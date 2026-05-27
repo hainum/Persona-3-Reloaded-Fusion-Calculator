@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
-import { X } from 'lucide-react';
+import { X, AlertTriangle } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import { generateBookmarkName } from '../lib/BookmarkManager';
+import { getMaxInheritedSkills } from '../lib/FusionCalculator';
+import { canInherit } from '../data/DataParser';
 
 export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequiredPersonas, personaOptions, skillOptions, onSave, onClose }) {
   const [targetPersona, setTargetPersona] = useState(initialPersona || '');
@@ -12,6 +14,17 @@ export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequir
   });
   const [requiredPersonas, setRequiredPersonas] = useState(initialRequiredPersonas || []);
   const [name, setName] = useState('');
+
+  const incompatibleSkills = useMemo(() => {
+    if (!targetPersona) return [];
+    return targetSkills.filter(s => s && !canInherit(targetPersona, s));
+  }, [targetPersona, targetSkills]);
+
+  const slotOverflow = useMemo(() => {
+    if (!targetPersona) return 0;
+    const active = targetSkills.filter(Boolean);
+    return Math.max(0, active.length - getMaxInheritedSkills(targetPersona));
+  }, [targetPersona, targetSkills]);
 
   const autoName = useMemo(() => {
     return generateBookmarkName(targetPersona, targetSkills, requiredPersonas);
@@ -88,6 +101,18 @@ export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequir
               />
             ))}
           </div>
+          {incompatibleSkills.length > 0 && (
+            <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255, 193, 7, 0.15)', border: '1px solid rgba(255, 193, 7, 0.3)', borderRadius: '6px', fontSize: '0.8rem', color: '#ffd54f' }}>
+              <AlertTriangle size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+              <strong>Inheritance conflict:</strong> {targetPersona} cannot inherit {incompatibleSkills.join(', ')}. These will need Skill Cards to be usable on this Persona.
+            </div>
+          )}
+          {slotOverflow > 0 && (
+            <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255, 100, 100, 0.15)', border: '1px solid rgba(255, 100, 100, 0.3)', borderRadius: '6px', fontSize: '0.8rem', color: '#ff9999' }}>
+              <AlertTriangle size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+              <strong>Too many skills:</strong> {targetPersona} can only inherit {getMaxInheritedSkills(targetPersona)} skills via fusion ({slotOverflow} excess). Use Skill Cards for the rest.
+            </div>
+          )}
         </div>
 
         <div>
@@ -150,12 +175,16 @@ export function AddSkillToBookmarkModal({ skillName, bookmarks, onAdd, onClose }
           <div className="flex-col gap-2" style={{ maxHeight: '300px', overflowY: 'auto' }}>
             {[...bookmarks].reverse().map(b => {
               const alreadyHas = b.targetSkills.includes(skillName);
+              const cannotInherit = b.targetPersona && !canInherit(b.targetPersona, skillName);
+              const maxSlots = b.targetPersona ? getMaxInheritedSkills(b.targetPersona) : Infinity;
+              const wouldOverflow = !alreadyHas && b.targetSkills.length >= maxSlots;
+              const isDisabled = alreadyHas || cannotInherit || wouldOverflow;
               return (
                 <div
                   key={b.id}
                   className="bookmark-item"
-                  onClick={() => { if (!alreadyHas) { onAdd(b.id, skillName); onClose(); } }}
-                  style={{ opacity: alreadyHas ? 0.5 : 1, cursor: alreadyHas ? 'default' : 'pointer' }}
+                  onClick={() => { if (!isDisabled) { onAdd(b.id, skillName); onClose(); } }}
+                  style={{ opacity: isDisabled ? 0.5 : 1, cursor: isDisabled ? 'default' : 'pointer' }}
                 >
                   <div className="flex-col" style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{b.name}</div>
@@ -164,6 +193,8 @@ export function AddSkillToBookmarkModal({ skillName, bookmarks, onAdd, onClose }
                     </div>
                   </div>
                   {alreadyHas && <span style={{ fontSize: '0.75rem', color: 'var(--p3r-text-muted)' }}>Added</span>}
+                  {cannotInherit && <span style={{ fontSize: '0.75rem', color: '#ff9999' }}>Incompatible</span>}
+                  {wouldOverflow && <span style={{ fontSize: '0.75rem', color: '#ff9999' }}>Full ({maxSlots} max)</span>}
                 </div>
               );
             })}

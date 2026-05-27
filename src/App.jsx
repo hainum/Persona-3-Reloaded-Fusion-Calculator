@@ -5,14 +5,15 @@ import PersonaDatabase from './components/PersonaDatabase';
 import BookmarkDrawer from './components/BookmarkDrawer';
 import { SaveBookmarkModal } from './components/BookmarkModal';
 import CustomPersonaModal from './components/CustomPersonaModal';
-import { personaData, skillData, isSkillInheritable } from './data/DataParser';
+import { personaData, skillData, isSkillInheritable, canInherit } from './data/DataParser';
 import { loadBookmarks, saveBookmarks, createBookmark, findMatchingBookmark } from './lib/BookmarkManager';
-import { Zap, Search, X, Calculator, Database, Bookmark, BookmarkPlus } from 'lucide-react';
+import { getMaxInheritedSkills } from './lib/FusionCalculator';
+import { Zap, Search, X, Calculator, Database, Bookmark, BookmarkPlus, AlertTriangle } from 'lucide-react';
 
 export default function App() {
   const [view, setView] = useState('calculator');
   const [targetPersona, setTargetPersona] = useState('');
-  const [targetSkills, setTargetSkills] = useState(['', '', '', '', '', '', '', '']);
+  const [targetSkills, setTargetSkills] = useState([]);
   const [paths, setPaths] = useState(null);
   const [error, setError] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -142,20 +143,20 @@ export default function App() {
   };
 
   const handleAddSkillToBookmark = (bookmarkId, skillName) => {
-    setBookmarks(prev => prev.map(b =>
-      b.id === bookmarkId && !b.targetSkills.includes(skillName)
-        ? { ...b, targetSkills: [...b.targetSkills, skillName] }
-        : b
-    ));
+    setBookmarks(prev => prev.map(b => {
+      if (b.id !== bookmarkId) return b;
+      if (b.targetSkills.includes(skillName)) return b;
+      if (b.targetPersona && !canInherit(b.targetPersona, skillName)) return b;
+      if (b.targetPersona && b.targetSkills.length >= getMaxInheritedSkills(b.targetPersona)) return b;
+      return { ...b, targetSkills: [...b.targetSkills, skillName] };
+    }));
   };
 
   const handleLoadBookmark = (b) => {
     cancelSearch();
     setView('calculator');
     setTargetPersona(b.targetPersona);
-    const skills = [...b.targetSkills];
-    while (skills.length < 8) skills.push('');
-    setTargetSkills(skills);
+    setTargetSkills([...b.targetSkills]);
     setRequiredPersonas(b.requiredPersonas);
     setPaths(null);
     setError(null);
@@ -191,10 +192,19 @@ export default function App() {
       }));
   }, []);
 
-  const handleSkillChange = (index, value) => {
-    const newSkills = [...targetSkills];
-    newSkills[index] = value;
-    setTargetSkills(newSkills);
+  const incompatibleSkills = useMemo(() => {
+    if (!targetPersona) return [];
+    return targetSkills.filter(s => !canInherit(targetPersona, s));
+  }, [targetPersona, targetSkills]);
+
+  const handleAddSkill = (name) => {
+    if (!name || targetSkills.includes(name)) return;
+    if (targetPersona && targetSkills.length >= getMaxInheritedSkills(targetPersona)) return;
+    setTargetSkills(prev => [...prev, name]);
+  };
+
+  const handleRemoveSkill = (name) => {
+    setTargetSkills(prev => prev.filter(s => s !== name));
   };
 
   const handleAddRequiredPersona = (name) => {
@@ -267,7 +277,7 @@ export default function App() {
       workerHealthyRef.current = true;
     }
     const w = workerRef.current;
-    const activeSkills = targetSkills.filter(s => s !== '');
+    const activeSkills = targetSkills;
     w.postMessage({
       type: 'search',
       payload: {
@@ -418,19 +428,54 @@ export default function App() {
             />
 
             <div>
-              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Target Skills</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                {targetSkills.map((skill, i) => (
-                  <SearchableSelect 
-                    key={i}
-                    placeholder={`Skill ${i + 1}`}
-                    options={[{value: '', label: 'None'}, ...skillOptions]}
-                    value={skill}
-                    onChange={(val) => handleSkillChange(i, val)}
-                    noMargin={true}
-                  />
-                ))}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Target Skills</h3>
+                {targetPersona && (
+                  <span style={{ fontSize: '0.8rem', color: 'var(--p3r-text-muted)' }}>
+                    {targetSkills.length}/{getMaxInheritedSkills(targetPersona)} skills
+                  </span>
+                )}
               </div>
+              <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Search and select skills to inherit on the final persona.</span>
+              {targetSkills.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {targetSkills.map(name => (
+                    <span
+                      key={name}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        background: incompatibleSkills.includes(name)
+                          ? 'rgba(255, 193, 7, 0.15)'
+                          : 'rgba(0, 229, 255, 0.15)',
+                        border: incompatibleSkills.includes(name)
+                          ? '1px solid rgba(255, 193, 7, 0.3)'
+                          : '1px solid rgba(0, 229, 255, 0.3)',
+                        borderRadius: '4px', padding: '3px 8px', fontSize: '0.85rem',
+                        color: incompatibleSkills.includes(name) ? '#ffd54f' : 'var(--p3r-cyan)'
+                      }}
+                    >
+                      {name}
+                      <X
+                        size={14}
+                        style={{ cursor: 'pointer', opacity: 0.7 }}
+                        onClick={() => handleRemoveSkill(name)}
+                      />
+                    </span>
+                  ))}
+                </div>
+              )}
+              <SkillSearch
+                skillOptions={skillOptions}
+                selectedSkills={targetSkills}
+                onSelect={handleAddSkill}
+                isFull={targetPersona ? targetSkills.length >= getMaxInheritedSkills(targetPersona) : false}
+              />
+              {incompatibleSkills.length > 0 && (
+                <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(255, 193, 7, 0.15)', border: '1px solid rgba(255, 193, 7, 0.3)', borderRadius: '6px', fontSize: '0.8rem', color: '#ffd54f' }}>
+                  <AlertTriangle size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+                  <strong>Inheritance conflict:</strong> {targetPersona} cannot inherit {incompatibleSkills.join(', ')} via fusion &mdash; use Skill Cards instead.
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: '0.75rem' }}>
@@ -547,7 +592,7 @@ export default function App() {
             <button
               className="btn-outline flex items-center justify-between"
               style={{ width: '100%', padding: '10px 16px', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', gap: '6px', justifyContent: 'center', marginTop: '0.5rem' }}
-              onClick={() => setSaveBookmarkConfig({ initialPersona: targetPersona, initialSkills: targetSkills.filter(Boolean), initialRequiredPersonas: requiredPersonas })}
+              onClick={() => setSaveBookmarkConfig({ initialPersona: targetPersona, initialSkills: targetSkills, initialRequiredPersonas: requiredPersonas })}
               disabled={!targetPersona}
             >
               <BookmarkPlus size={16} /> Save as Bookmark
@@ -727,6 +772,117 @@ function RequiredPersonaSearch({ personaOptions, excludeNames, onSelect }) {
           <ul ref={listRef} style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {filtered.map((opt, i) => (
               <li 
+                key={opt.value}
+                onClick={() => handleSelect(opt.value)}
+                onMouseEnter={() => setHighlightedIndex(i)}
+                style={{
+                  padding: '6px 10px', cursor: 'pointer', borderRadius: '4px', fontSize: '0.9rem',
+                  background: i === highlightedIndex ? 'rgba(0, 229, 255, 0.2)' : 'transparent'
+                }}
+                onMouseLeave={(e) => { if (i !== highlightedIndex) e.currentTarget.style.background = 'transparent'; }}
+              >
+                {opt.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SkillSearch({ skillOptions, selectedSkills, onSelect, isFull }) {
+  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const wrapperRef = useRef(null);
+  const listRef = useRef(null);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return [];
+    return skillOptions
+      .filter(opt => !selectedSkills.includes(opt.value))
+      .filter(opt => opt.label.toLowerCase().includes(search.toLowerCase()))
+      .slice(0, 8);
+  }, [search, skillOptions, selectedSkills]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const item = listRef.current.children[highlightedIndex];
+      if (item) item.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightedIndex]);
+
+  const handleSelect = (val) => {
+    onSelect(val);
+    setSearch('');
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative' }}>
+      {isFull ? (
+        <div className="input-wrapper" style={{ opacity: 0.5 }}>
+          <Search size={14} style={{ color: 'var(--p3r-text-muted)', marginRight: '8px', flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Max skills reached"
+            disabled
+            style={{ background: 'transparent', border: 'none', padding: '0', flex: 1, color: 'var(--p3r-text-muted)', outline: 'none', cursor: 'not-allowed' }}
+          />
+        </div>
+      ) : (
+        <div className="input-wrapper">
+          <Search size={14} style={{ color: 'var(--p3r-text-muted)', marginRight: '8px', flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Search skill to add..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setIsOpen(true); setHighlightedIndex(-1); }}
+            onFocus={() => { if (search.trim()) setIsOpen(true); }}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setHighlightedIndex(i => Math.min(i + 1, filtered.length - 1));
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setHighlightedIndex(i => Math.max(i - 1, 0));
+              } else if (e.key === 'Enter' && highlightedIndex >= 0) {
+                e.preventDefault();
+                handleSelect(filtered[highlightedIndex].value);
+              } else if (e.key === 'Enter' && filtered.length === 1) {
+                e.preventDefault();
+                handleSelect(filtered[0].value);
+              } else if (e.key === 'Escape') {
+                setIsOpen(false);
+              }
+            }}
+          />
+        </div>
+      )}
+      {isOpen && filtered.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+          marginTop: '4px', padding: '6px', maxHeight: '200px', overflowY: 'auto',
+          background: 'rgba(10, 25, 47, 0.95)',
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid var(--glass-border)', borderRadius: '8px',
+          boxShadow: '0 12px 40px 0 rgba(0, 0, 0, 0.6)'
+        }}>
+          <ul ref={listRef} style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {filtered.map((opt, i) => (
+              <li
                 key={opt.value}
                 onClick={() => handleSelect(opt.value)}
                 onMouseEnter={() => setHighlightedIndex(i)}
