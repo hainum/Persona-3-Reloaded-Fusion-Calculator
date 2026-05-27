@@ -971,6 +971,47 @@ console.log('\n── skillLearnedBy Index ──');
     'Non-existent skill: not in index');
 }
 
+// ── 13. P3R Fusion Formula ──────────────────────────────────────
+
+console.log('\n── P3R Fusion Formula ──');
+{
+  const samplePersonas = Object.keys(personaData)
+    .sort(() => Math.random() - 0.5).slice(0, 30);
+
+  // P3R formula: different-race uses ceil(avg), same-race uses floor(avg).
+  // SL ranks do NOT affect the fusion target level.
+  const evenAvgPairs = [];
+  for (let i = 0; i < samplePersonas.length; i++) {
+    for (let j = i + 1; j < samplePersonas.length; j++) {
+      const pA = personaData[samplePersonas[i]];
+      const pB = personaData[samplePersonas[j]];
+      if (pA.race !== pB.race && (pA.lvl + pB.lvl) % 2 === 0) {
+        const result = getNormalFusionResult(pA, pB);
+        if (result && arcanaPersonas[result.race]) {
+          const target = Math.ceil((pA.lvl + pB.lvl) / 2);
+          const normals = arcanaPersonas[result.race].filter(p => !specialRecipeResults.has(p.name));
+          const arcanaMax = normals.length ? Math.max(...normals.map(p => p.lvl)) : 0;
+          evenAvgPairs.push({ a: pA.name, b: pB.name, result: result.name, lvl: result.lvl, target, arcanaMax });
+        }
+        if (evenAvgPairs.length >= 5) break;
+      }
+    }
+    if (evenAvgPairs.length >= 5) break;
+  }
+  assert(evenAvgPairs.length > 0, `P3R formula: ${evenAvgPairs.length} different-race even-avg pairs resolved`);
+  for (const pair of evenAvgPairs) {
+    const valid = pair.lvl >= pair.target || pair.lvl === pair.arcanaMax;
+    assert(valid, `P3R formula: ${pair.a}+${pair.b} result lv${pair.lvl} >= ceil(${pair.target}) or highest (lv${pair.arcanaMax})`);
+  }
+
+  // SL ranks confirmed to not affect fusion targets via in-game testing
+  const qA = personaData['Quetzalcoatl'];
+  const aA = personaData['Ara Mitama'];
+  const qAmResult = getNormalFusionResult(qA, aA);
+  assert(qAmResult && qAmResult.name === 'Jikokuten',
+    'SL unaffected: Quetzalcoatl+Ara Mitama -> Jikokuten (not Hanuman)');
+}
+
 // ── Summary ─────────────────────────────────────────────────────
 
 console.log('\n═══════════════════════════════════════════════');

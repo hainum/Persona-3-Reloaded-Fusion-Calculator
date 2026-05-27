@@ -3,6 +3,7 @@ import skillDataRaw from './skill-data.json' with { type: 'json' };
 import fusionChartRaw from './fusion-chart.json' with { type: 'json' };
 import specialRecipesRaw from './special-recipes.json' with { type: 'json' };
 import compConfigRaw from './comp-config.json' with { type: 'json' };
+import unlockRequirementsRaw from './unlock-requirements.json' with { type: 'json' };
 
 // Process Skills
 const skillData = {};
@@ -124,5 +125,6 @@ export {
   skillLearnedBy,
   fusionChartRaw as fusionChart,
   specialRecipesRaw as specialRecipes,
-  compConfigRaw as compConfig
+  compConfigRaw as compConfig,
+  unlockRequirementsRaw as unlockRequirements
 };

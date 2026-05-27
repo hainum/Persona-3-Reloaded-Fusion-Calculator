@@ -461,3 +461,10 @@ button:disabled {
 .anim-fade-up {
   /* animation disabled */
 }
+
+/* Tooltip */
+.tooltip {
+  position: relative;
+  cursor: help;
+}
+

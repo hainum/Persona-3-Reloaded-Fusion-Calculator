@@ -45,7 +45,7 @@ function getResultRace(raceA, raceB) {
   return resultRace === "-" ? null : resultRace;
 }
 
-function getNormalFusionResult(personaA, personaB) {
+export function getNormalFusionResult(personaA, personaB) {
   if (personaA.name === personaB.name) return null;
 
   const resultRace = getResultRace(personaA.race, personaB.race);
@@ -55,7 +55,8 @@ function getNormalFusionResult(personaA, personaB) {
   if (!candidatePersonas) return null;
 
   const isSameRace = personaA.race === personaB.race;
-  const targetLevel = Math.floor((personaA.lvl + personaB.lvl) / 2) + (isSameRace ? 0 : 1);
+  const avg = (personaA.lvl + personaB.lvl) / 2;
+  const targetLevel = isSameRace ? Math.floor(avg) : Math.ceil(avg);
 
   if (isSameRace) {
     // Find the one strictly below targetLevel, excluding A, B, and specials
@@ -69,48 +70,38 @@ function getNormalFusionResult(personaA, personaB) {
     }
     return result;
   } else {
-    // Find the one >= targetLevel, excluding specials
+    // Find the one closest to avg, excluding specials (tiebreak: higher level)
     let result = null;
+    let bestDist = Infinity;
     for (let i = 0; i < candidatePersonas.length; i++) {
       const p = candidatePersonas[i];
-      if (p.lvl >= targetLevel && !specialRecipeResults.has(p.name)) {
+      if (specialRecipeResults.has(p.name)) continue;
+      const dist = Math.abs(p.lvl - avg);
+      if (dist < bestDist || (dist === bestDist && (!result || p.lvl > result.lvl))) {
         result = p;
-        break;
-      }
-    }
-    // If none are higher, usually it's the highest possible normal persona of that arcana
-    if (!result) {
-      for (let i = candidatePersonas.length - 1; i >= 0; i--) {
-        const p = candidatePersonas[i];
-        if (!specialRecipeResults.has(p.name)) {
-          result = p;
-          break;
-        }
+        bestDist = dist;
       }
     }
     return result;
   }
 }
 
-// Precompute what makes what for fast reverse lookup
+// Build base recipe map (no Social Link influence)
 const recipeMap = {};
 for (const pName of allPersonas) {
   recipeMap[pName] = [];
 }
 
-// Map special recipes
 for (const [result, ingredients] of Object.entries(specialRecipes)) {
   if (recipeMap[result]) {
     recipeMap[result].push({ ingredients, isSpecial: true });
   }
 }
 
-// Generate all valid 2-way normal fusions
 for (let i = 0; i < allPersonas.length; i++) {
   for (let j = i + 1; j < allPersonas.length; j++) {
     const pA = personaData[allPersonas[i]];
     const pB = personaData[allPersonas[j]];
-    
     const result = getNormalFusionResult(pA, pB);
     if (result) {
       recipeMap[result.name].push({ ingredients: [pA.name, pB.name], isSpecial: false });
@@ -118,8 +109,6 @@ for (let i = 0; i < allPersonas.length; i++) {
   }
 }
 
-// Pre-sort all recipes by the maximum level of their ingredients ascending.
-// This guarantees that we explore paths requiring lower-level personas first.
 for (const pName of allPersonas) {
   recipeMap[pName].sort((a, b) => {
     const maxA = Math.max(personaLevelMap[a.ingredients[0]] || 0, personaLevelMap[a.ingredients[1]] || 0);

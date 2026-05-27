@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { personaData, skillData, personaList, skillLearnedBy, compConfig } from '../data/DataParser';
+import { personaData, skillData, personaList, skillLearnedBy, compConfig, unlockRequirements } from '../data/DataParser';
 import { getAllRecipes, getForwardFusions } from '../lib/FusionCalculator';
 import { Search, X, List, ShieldQuestion, ArrowUpDown, ArrowLeft, Star, BookmarkPlus, Plus, Lock } from 'lucide-react';
 import { SaveBookmarkModal, AddSkillToBookmarkModal } from './BookmarkModal';
@@ -164,6 +164,7 @@ function createSortableColumn(label, key, compareFn) {
 
 function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
   const pData = personaData[personaName];
+  const [recipeSearch, setRecipeSearch] = useState('');
 
   const skills = useMemo(() => {
     if (!pData) return [];
@@ -196,10 +197,18 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
     return rows;
   }, [pData]);
 
-  if (!pData) return null;
-
   const recipes = getAllRecipes(personaName);
   const forwardFusions = getForwardFusions(personaName);
+
+  const filteredRecipes = useMemo(() => {
+    if (!recipeSearch.trim()) return recipes;
+    const q = recipeSearch.toLowerCase();
+    return recipes.filter(r =>
+      r.ingredients.some(ing => ing.toLowerCase().includes(q))
+    );
+  }, [recipes, recipeSearch]);
+
+  if (!pData) return null;
 
   return (
     <div className="flex-col gap-6">
@@ -211,7 +220,20 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)' }}>
           <div className="flex justify-between items-center">
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{personaName}</h2>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>
+                {personaName}
+                {unlockRequirements[personaName] && (
+                  <>
+                    {' '}
+                    <span title={unlockRequirements[personaName].description}>
+                      <Lock size={16} style={{ color: 'var(--p3r-cyan)', verticalAlign: 'middle' }} />
+                    </span>
+                    <span className="elem-badge" style={{ marginLeft: '8px', fontSize: '0.65rem', padding: '2px 8px', background: 'rgba(255, 193, 7, 0.15)', color: '#ffd54f', borderColor: 'rgba(255, 193, 7, 0.3)', verticalAlign: 'middle' }}>
+                      {unlockRequirements[personaName].type === 'dlc' ? 'DLC' : unlockRequirements[personaName].type === 'link_episode' ? 'Link Episode' : 'Unlockable'}
+                    </span>
+                  </>
+                )}
+              </h2>
               <p className="text-muted" style={{ margin: '4px 0 0', fontSize: '0.95rem' }}>
                 Lv {pData.lvl} {'\u00b7'} {pData.race}
               </p>
@@ -275,7 +297,27 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
 
         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
           <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Reverse Fusion</h3>
-          {recipes.length > 0 ? (
+          <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px', marginBottom: '10px' }}>
+            <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
+            <input
+              type="text"
+              placeholder="Filter by ingredient name..."
+              value={recipeSearch}
+              onChange={e => setRecipeSearch(e.target.value)}
+              style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
+            />
+            {recipeSearch && (
+              <button
+                onClick={() => setRecipeSearch('')}
+                style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', color: 'var(--p3r-text-muted)', flexShrink: 0, lineHeight: 0 }}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+            <span style={{ color: 'var(--p3r-text-muted)', fontSize: '0.85rem', flexShrink: 0 }}>{filteredRecipes.length} recipes</span>
+          </div>
+          {filteredRecipes.length > 0 ? (
             <table className="data-table" style={{ fontSize: '0.85rem' }}>
               <thead>
                 <tr>
@@ -285,7 +327,7 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
                 </tr>
               </thead>
               <tbody>
-                {recipes.map((r, i) => (
+                {filteredRecipes.map((r, i) => (
                   <tr key={i}>
                     <td colSpan={2}>
                       <div className="flex gap-1" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
@@ -315,7 +357,7 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
               </tbody>
             </table>
           ) : (
-            <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>No fusion recipes found for this persona.</p>
+            <p className="text-muted" style={{ margin: 0, fontSize: '0.9rem' }}>{recipes.length === 0 ? 'No fusion recipes found for this persona.' : 'No recipes match your filter.'}</p>
           )}
         </div>
 
@@ -568,7 +610,14 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                   <tbody>
                     {filteredPersonas.map(p => (
                       <tr key={p.name} onClick={() => setSelectedPersona(p.name)} style={{ cursor: 'pointer' }}>
-                        <td><strong>{p.name}</strong></td>
+                        <td>
+                          <strong>{p.name}</strong>
+                          {unlockRequirements[p.name] && (
+                            <span title={unlockRequirements[p.name].description}>
+                              <Lock size={12} style={{ marginLeft: '6px', color: 'var(--p3r-cyan)', verticalAlign: 'middle' }} />
+                            </span>
+                          )}
+                        </td>
                         <td>{p.lvl}</td>
                         <td>{p.race}</td>
                         <td onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>

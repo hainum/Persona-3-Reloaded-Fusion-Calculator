@@ -1,0 +1,106 @@
+{
+  "Byakko": {
+    "description": "Complete all 5 of Koromaru's Link Episodes",
+    "type": "link_episode"
+  },
+  "Surt": {
+    "description": "Complete all of Junpei's Link Episodes",
+    "type": "link_episode"
+  },
+  "Scathach": {
+    "description": "Complete all of Fuuka's Link Episodes",
+    "type": "link_episode"
+  },
+  "Alilat": {
+    "description": "Complete all of Mitsuru's Link Episodes",
+    "type": "link_episode"
+  },
+  "King Frost": {
+    "description": "Complete all of Akihiko's Link Episodes",
+    "type": "link_episode"
+  },
+  "Odin": {
+    "description": "Complete all of Ken's Link Episodes",
+    "type": "link_episode"
+  },
+  "Attis": {
+    "description": "Complete Elizabeth Request 58: Eliminate the Reaper",
+    "type": "request"
+  },
+  "Masakado": {
+    "description": "Complete Elizabeth Request 87: The Reaper's Apex (Loki Lv 75+)",
+    "type": "request"
+  },
+  "Izanagi": {
+    "description": "Purchase the Persona 4 Golden DLC Pack",
+    "type": "dlc"
+  },
+  "Magatsu-Izanagi": {
+    "description": "Purchase the Persona 4 Golden DLC Pack",
+    "type": "dlc"
+  },
+  "Kaguya": {
+    "description": "Purchase the Persona 4 Golden DLC Pack",
+    "type": "dlc"
+  },
+  "Arsene": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 1",
+    "type": "dlc"
+  },
+  "Zorro": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 1",
+    "type": "dlc"
+  },
+  "Johanna": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 1",
+    "type": "dlc"
+  },
+  "Milady": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 1",
+    "type": "dlc"
+  },
+  "Goemon": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 1",
+    "type": "dlc"
+  },
+  "Carmen": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 1",
+    "type": "dlc"
+  },
+  "Captain Kidd": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 1",
+    "type": "dlc"
+  },
+  "Robin Hood": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 1",
+    "type": "dlc"
+  },
+  "Satanael": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 2",
+    "type": "dlc"
+  },
+  "Mercurius": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 2",
+    "type": "dlc"
+  },
+  "Anat": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 2",
+    "type": "dlc"
+  },
+  "Astarte": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 2",
+    "type": "dlc"
+  },
+  "Kamu Susano-o": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 2",
+    "type": "dlc"
+  },
+  "Hecate": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 2",
+    "type": "dlc"
+  },
+  "Seiten Taisei A": {
+    "description": "Purchase the Persona 5 Royal DLC Pack 2",
+    "type": "dlc"
+  }
+}

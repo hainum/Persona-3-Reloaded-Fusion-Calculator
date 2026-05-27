@@ -6,6 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const testFiles = [
   'bookmark.test.js',
+  'unlock.test.js',
   'algorithm.test.js',
 ];
 

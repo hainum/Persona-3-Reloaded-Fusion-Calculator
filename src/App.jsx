@@ -378,7 +378,6 @@ export default function App() {
                     onClick={() => { const n = Math.min(99, currentLevel + 1); setCurrentLevel(n); setLevelText(String(n)); }}
                   >+</button>
                 </div>
-                
               </div>
             )}
           </div>
@@ -644,7 +643,7 @@ export default function App() {
         />
       )}
     </div>
-    </>
+    </>        
   );
 }
 
