@@ -125,7 +125,7 @@ export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequir
 
         <div className="flex gap-2" style={{ justifyContent: 'flex-end', marginTop: '0.5rem' }}>
           <button onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={handleSave} disabled={!targetPersona}>Save Bookmark</button>
+          <button className="btn-primary" onClick={handleSave} disabled={!targetPersona}>Save Bookmark</button>
         </div>
       </div>
     </>
@@ -160,7 +160,7 @@ export function AddSkillToBookmarkModal({ skillName, bookmarks, onAdd, onClose }
                   <div className="flex-col" style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{b.name}</div>
                     <div className="text-muted" style={{ fontSize: '0.8rem' }}>
-                      {b.targetPersona} \u00b7 {b.targetSkills.length} skills
+                      {b.targetPersona} {'\u00b7'} {b.targetSkills.length} skills
                     </div>
                   </div>
                   {alreadyHas && <span style={{ fontSize: '0.75rem', color: 'var(--p3r-text-muted)' }}>Added</span>}

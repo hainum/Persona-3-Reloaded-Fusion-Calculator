@@ -40,7 +40,7 @@ export default function SearchableSelect({ label, options, value, onChange, plac
 
   return (
     <div className="searchable-select-wrapper" ref={wrapperRef} style={{ position: 'relative', width: '100%', marginBottom: noMargin ? '0' : '1rem' }}>
-      {label && <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>{label}</label>}
+      {label && <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '1.1rem', fontFamily: 'var(--font-heading)', color: 'var(--p3r-white)', textShadow: '0 0 10px rgba(0, 229, 255, 0.3)' }}>{label}</label>}
       <div 
         className="select-trigger"
         onClick={() => { setIsOpen(!isOpen); setHighlightedIndex(-1); }}
@@ -70,7 +70,7 @@ export default function SearchableSelect({ label, options, value, onChange, plac
             boxShadow: '0 12px 40px 0 rgba(0, 0, 0, 0.6)'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '5px' }}>
+          <div className="input-wrapper" style={{ marginBottom: '10px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '5px', borderRadius: 0, border: 'none', borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--glass-border)', padding: '4px 0 5px' }}>
             <Search size={16} style={{ color: 'var(--p3r-text-muted)', marginRight: '8px' }} />
               <input 
                 autoFocus
@@ -95,7 +95,6 @@ export default function SearchableSelect({ label, options, value, onChange, plac
                     setIsOpen(false);
                   }
                 }}
-                style={{ border: 'none', background: 'transparent', padding: 0, boxShadow: 'none' }}
               />
           </div>
           <ul ref={listRef} style={{ listStyle: 'none', padding: 0, margin: 0 }}>

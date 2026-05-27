@@ -72,7 +72,7 @@ export default function CustomPersonaModal({ personaOptions, skillOptions, initi
           onChange={setPersonaName}
         />
 
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem' }}>Skills Known</label>
+        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '1.1rem', fontFamily: 'var(--font-heading)', color: 'var(--p3r-white)', textShadow: '0 0 10px rgba(0, 229, 255, 0.3)' }}>Skills Known</label>
 
         {skills.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
@@ -91,7 +91,7 @@ export default function CustomPersonaModal({ personaOptions, skillOptions, initi
         )}
 
         <div ref={wrapperRef} style={{ position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
+          <div className="input-wrapper">
             <Search size={14} style={{ color: 'var(--p3r-text-muted)', marginRight: '8px', flexShrink: 0 }} />
             <input
               ref={inputRef}
@@ -119,7 +119,6 @@ export default function CustomPersonaModal({ personaOptions, skillOptions, initi
                   removeSkill(skills[skills.length - 1]);
                 }
               }}
-              style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
             />
           </div>
           {isOpen && filteredSkills.length > 0 && (
@@ -151,8 +150,8 @@ export default function CustomPersonaModal({ personaOptions, skillOptions, initi
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-          <button onClick={onClose} style={{ textTransform: 'none', letterSpacing: 'normal' }}>Cancel</button>
-          <button onClick={handleSave} disabled={!personaName}>Save</button>
+          <button onClick={onClose} style={{ textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem' }}>Cancel</button>
+          <button className="btn-primary" onClick={handleSave} disabled={!personaName} style={{ fontSize: '0.9rem' }}>Save</button>
         </div>
       </div>
     </>

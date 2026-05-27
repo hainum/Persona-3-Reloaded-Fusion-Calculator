@@ -332,8 +332,8 @@ export default function App() {
         </div>
       </div>
 
-      <div className="container flex-col gap-6" style={{ paddingTop: isScrolled ? 'calc(48px + 2rem)' : '2rem' }}>
-        <header className="glass-panel" style={{ marginBottom: '2rem', padding: '0' }}>
+      <div className="container flex-col gap-6" style={{ paddingTop: isScrolled ? 'calc(48px + 2.5rem)' : '2.5rem' }}>
+        <header className="glass-panel" style={{ padding: '0', marginBottom: '1rem' }}>
           <div className="flex justify-between items-center" style={{ padding: '20px 24px 0' }}>
             <div>
               <h1 style={{ marginBottom: '0.25rem' }}><Zap size={28} className="text-cyan" style={{ verticalAlign: 'middle', marginRight: '10px' }}/>P3R Fusion Calculator</h1>
@@ -344,7 +344,7 @@ export default function App() {
                 <div className="flex items-center" style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '5px 10px' }}>
                   <span style={{ marginRight: '10px', color: 'var(--p3r-text-muted)', fontSize: '0.9rem' }}>Current Level</span>
                   <button
-                    style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
+                    className="level-btn"
                     onClick={() => { const n = Math.max(1, currentLevel - 1); setCurrentLevel(n); setLevelText(String(n)); }}
                   >-</button>
                   <input
@@ -374,7 +374,7 @@ export default function App() {
                     min="1" max="99"
                   />
                   <button
-                    style={{ padding: '2px 8px', minWidth: 'auto', border: 'none', background: 'transparent' }}
+                    className="level-btn"
                     onClick={() => { const n = Math.min(99, currentLevel + 1); setCurrentLevel(n); setLevelText(String(n)); }}
                   >+</button>
                 </div>
@@ -405,7 +405,7 @@ export default function App() {
         </header>
 
       {view === 'calculator' ? (
-        <div className="grid" style={{ gridTemplateColumns: '350px 1fr', gap: '2rem', alignItems: 'start' }}>
+        <div className="app-layout">
           <aside className="glass-panel flex-col gap-4">
             <h2>Configuration</h2>
             
@@ -417,7 +417,7 @@ export default function App() {
               onChange={setTargetPersona}
             />
 
-            <div style={{ marginTop: '1rem' }}>
+            <div>
               <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Target Skills</h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 {targetSkills.map((skill, i) => (
@@ -433,7 +433,7 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ marginTop: '1rem' }}>
+            <div>
               <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Include Personas</h3>
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Only show paths containing these Personas.</span>
               
@@ -467,7 +467,7 @@ export default function App() {
               />
             </div>
 
-            <div style={{ marginTop: '1rem' }}>
+            <div>
               <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Exclude Personas</h3>
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Hide paths containing these Personas.</span>
 
@@ -496,16 +496,16 @@ export default function App() {
 
               {excludedPersonas.length > 0 && (
                 <button
-                  className="icon-btn"
+                  className="btn-danger"
                   onClick={handleClearExcludedPersonas}
-                  style={{ fontSize: '0.85rem', padding: '4px 10px', marginBottom: '8px', color: '#ff7777' }}
+                  style={{ fontSize: '0.85rem', padding: '4px 10px', marginBottom: '8px' }}
                 >
                   Clear All
                 </button>
               )}
             </div>
 
-            <div style={{ marginTop: '1rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1rem' }}>
+            <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1rem' }}>
               <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Custom Personas</h3>
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
                 Define personas with extra skills for inheritance.
@@ -536,17 +536,17 @@ export default function App() {
               )}
 
             <button
-              className="icon-btn"
+              className="btn-outline"
               onClick={() => setCustomPersonaModal({ persona: null, skills: [] })}
-              style={{ width: '100%', padding: '10px 16px', border: '1px solid var(--glass-border)' }}
+              style={{ width: '100%', padding: '10px 16px', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem' }}
             >
               + Add Custom Persona
             </button>
             </div>
 
             <button
-              className="icon-btn"
-              style={{ width: '100%', marginTop: '8px', padding: '10px 16px', border: '1px solid var(--glass-border)', gap: '6px' }}
+              className="btn-outline flex items-center justify-between"
+              style={{ width: '100%', padding: '10px 16px', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', gap: '6px', justifyContent: 'center' }}
               onClick={() => setSaveBookmarkConfig({ initialPersona: targetPersona, initialSkills: targetSkills.filter(Boolean), initialRequiredPersonas: requiredPersonas })}
               disabled={!targetPersona}
             >
@@ -688,7 +688,7 @@ function RequiredPersonaSearch({ personaOptions, excludeNames, onSelect }) {
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
+      <div className="input-wrapper">
         <Search size={14} style={{ color: 'var(--p3r-text-muted)', marginRight: '8px', flexShrink: 0 }} />
         <input 
           type="text"
@@ -713,7 +713,6 @@ function RequiredPersonaSearch({ personaOptions, excludeNames, onSelect }) {
               setIsOpen(false);
             }
           }}
-          style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
         />
       </div>
       {isOpen && filtered.length > 0 && (

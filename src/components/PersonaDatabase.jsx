@@ -24,6 +24,14 @@ const RESIST_LABELS = {
   't': 'Resist', 'T': 'Resist',
 };
 
+const RESIST_CLASS = {
+  'Weak': 'weak', 'Weak+': 'weak',
+  'Resist': 'resist', 'Resist+': 'resist',
+  'Null': 'null',
+  'Repel': 'repel',
+  'Drain': 'drain',
+};
+
 const FMT_DESC = {
   FMTAilmentBoost: (s) => `${s.statusEffect} chance up`,
   FMTAutoSkill: (s) => `Auto ${s.statusEffect} at battle start`,
@@ -212,7 +220,7 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
 
   return (
     <div className="flex-col gap-6">
-      <button className="flex items-center gap-2" onClick={onBack} style={{ alignSelf: 'flex-start', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', padding: '6px 14px' }}>
+      <button className="btn-outline flex items-center gap-2" onClick={onBack} style={{ alignSelf: 'flex-start', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', padding: '6px 14px' }}>
         <ArrowLeft size={16} /> Back to Persona List
       </button>
 
@@ -240,10 +248,10 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
             </div>
             <div className="flex items-center gap-2">
               <button
-                className="icon-btn flex items-center gap-1"
+                className="btn-outline flex items-center gap-1"
                 onClick={() => onBookmarkConfig({ initialPersona: personaName })}
                 title="Save as bookmark"
-                style={{ fontSize: '0.85rem', padding: '6px 12px', border: '1px solid var(--glass-border)' }}
+                style={{ fontSize: '0.85rem', padding: '6px 12px' }}
               >
                 <BookmarkPlus size={14} /> Bookmark
               </button>
@@ -252,20 +260,20 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
           </div>
         </div>
 
-        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)' }}>
           <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Resistances</h3>
           <div className="flex-col gap-2">
             {resistRows.map((row, ri) => (
               <div key={ri} className="flex gap-3" style={{ flexWrap: 'wrap' }}>
                 {row.map(r => (
-                  <span key={r.elem} className="resist-tag">{r.elem} <strong>{r.label}</strong></span>
+                  <span key={r.elem} className={`resist-tag ${RESIST_CLASS[r.label] || ''}`}>{r.elem} <strong>{r.label}</strong></span>
                 ))}
               </div>
             ))}
           </div>
         </div>
 
-        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)' }}>
           <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Skills</h3>
           {skills.length > 0 ? (
             <table className="data-table" style={{ fontSize: '0.85rem' }}>
@@ -295,16 +303,16 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
           )}
         </div>
 
-        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)' }}>
           <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Reverse Fusion</h3>
-          <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px', marginBottom: '10px' }}>
+          <div className="input-wrapper" style={{ marginBottom: '10px' }}>
             <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Filter by ingredient name..."
               value={recipeSearch}
               onChange={e => setRecipeSearch(e.target.value)}
-              style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
+              style={{ marginLeft: '8px' }}
             />
             {recipeSearch && (
               <button
@@ -361,7 +369,7 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
           )}
         </div>
 
-        <div style={{ padding: '16px 24px' }}>
+        <div style={{ padding: '20px 24px' }}>
           <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Forward Fusion</h3>
           {forwardFusions.length > 0 ? (
             <table className="data-table" style={{ fontSize: '0.85rem' }}>
@@ -570,7 +578,7 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
           {tab === 'personas' ? (
             <>
               <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
-                <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
+                <div className="input-wrapper">
                   <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
                   <input
                     ref={personaSearchRef}
@@ -578,7 +586,7 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                     placeholder="Search by name or arcana..."
                     value={personaSearch}
                     onChange={e => setPersonaSearch(e.target.value)}
-                    style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
+                    style={{ marginLeft: '8px' }}
                   />
                   {personaSearch && (
                     <button
@@ -641,7 +649,7 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
           ) : (
             <>
               <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--glass-border)' }}>
-                <div className="flex items-center gap-2" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '6px', padding: '8px 12px' }}>
+                <div className="input-wrapper">
                   <Search size={16} style={{ color: 'var(--p3r-text-muted)', flexShrink: 0 }} />
                   <input
                     ref={skillSearchRef}
@@ -649,7 +657,7 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                     placeholder="Search by name, element, or effect..."
                     value={skillSearch}
                     onChange={e => setSkillSearch(e.target.value)}
-                    style={{ border: 'none', background: 'transparent', padding: 0, width: '100%', boxShadow: 'none' }}
+                    style={{ marginLeft: '8px' }}
                   />
                   {skillSearch && (
                     <button
