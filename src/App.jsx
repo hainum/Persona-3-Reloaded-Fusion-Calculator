@@ -433,7 +433,7 @@ export default function App() {
               </div>
             </div>
 
-            <div>
+            <div style={{ marginTop: '0.75rem' }}>
               <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Include Personas</h3>
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Only show paths containing these Personas.</span>
               
@@ -467,7 +467,7 @@ export default function App() {
               />
             </div>
 
-            <div>
+            <div style={{ marginTop: '0.75rem' }}>
               <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Exclude Personas</h3>
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>Hide paths containing these Personas.</span>
 
@@ -546,7 +546,7 @@ export default function App() {
 
             <button
               className="btn-outline flex items-center justify-between"
-              style={{ width: '100%', padding: '10px 16px', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', gap: '6px', justifyContent: 'center' }}
+              style={{ width: '100%', padding: '10px 16px', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', gap: '6px', justifyContent: 'center', marginTop: '0.5rem' }}
               onClick={() => setSaveBookmarkConfig({ initialPersona: targetPersona, initialSkills: targetSkills.filter(Boolean), initialRequiredPersonas: requiredPersonas })}
               disabled={!targetPersona}
             >
