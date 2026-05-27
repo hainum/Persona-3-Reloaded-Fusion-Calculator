@@ -262,13 +262,9 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
 
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--glass-border)' }}>
           <h3 className="flex items-center gap-2" style={{ margin: '0 0 10px', fontSize: '1rem' }}><Star size={14} className="text-cyan" /> Resistances</h3>
-          <div className="flex-col gap-2">
-            {resistRows.map((row, ri) => (
-              <div key={ri} className="flex gap-3" style={{ flexWrap: 'wrap' }}>
-                {row.map(r => (
-                  <span key={r.elem} className={`resist-tag ${RESIST_CLASS[r.label] || ''}`}>{r.elem} <strong>{r.label}</strong></span>
-                ))}
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+            {resistRows.flat().map((r, i) => (
+              <span key={i} className={`resist-tag ${RESIST_CLASS[r.label] || ''}`}>{r.elem} <strong>{r.label}</strong></span>
             ))}
           </div>
         </div>

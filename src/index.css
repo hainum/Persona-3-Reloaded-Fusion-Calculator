@@ -365,9 +365,10 @@ button:disabled {
 
 /* --- Resistance tags with color variants --- */
 .resist-tag {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  width: 100%;
   padding: 3px 10px;
   border-radius: 4px;
   font-size: 0.82rem;
@@ -378,6 +379,8 @@ button:disabled {
 .resist-tag strong {
   color: var(--p3r-white);
   min-width: 32px;
+  text-align: right;
+  display: block;
 }
 
 /* Resistance color classes */
