@@ -70,7 +70,7 @@ export default function SearchableSelect({ label, options, value, onChange, plac
             boxShadow: '0 12px 40px 0 rgba(0, 0, 0, 0.6)'
           }}
         >
-          <div className="input-wrapper" style={{ marginBottom: '10px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '5px', borderRadius: 0, border: 'none', borderBottomWidth: '1px', borderBottomStyle: 'solid', borderBottomColor: 'var(--glass-border)', padding: '4px 0 5px' }}>
+          <div className="input-wrapper" style={{ marginBottom: '10px' }}>
             <Search size={16} style={{ color: 'var(--p3r-text-muted)', marginRight: '8px' }} />
               <input
                 autoFocus
@@ -105,7 +105,7 @@ export default function SearchableSelect({ label, options, value, onChange, plac
                 onClick={() => handleSelect(opt.value)}
                 onMouseEnter={() => setHighlightedIndex(i)}
                 style={{
-                  padding: '8px 10px', cursor: 'pointer', borderRadius: '4px',
+                  padding: '8px 10px', cursor: 'pointer', borderRadius: '4px', fontSize: '0.9rem',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   background: i === highlightedIndex
                     ? 'rgba(0, 229, 255, 0.2)'
@@ -119,7 +119,7 @@ export default function SearchableSelect({ label, options, value, onChange, plac
                 {opt.value === value && <Check size={16} style={{ color: 'var(--p3r-cyan)' }} />}
               </li>
             )) : (
-              <li style={{ padding: '8px 10px', color: 'var(--p3r-text-muted)', textAlign: 'center' }}>No results found</li>
+              <li style={{ padding: '8px 10px', fontSize: '0.9rem', color: 'var(--p3r-text-muted)', textAlign: 'center' }}>No results found</li>
             )}
           </ul>
         </div>
