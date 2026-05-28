@@ -1,4 +1,4 @@
-import { searchTree, generateFusionTrees, getPathPersonaNames, addPathMetadata } from '../lib/FusionCalculator.js';
+import { searchTree, generateFusionTrees, getPathPersonaNames, addPathMetadata, comparePaths } from '../lib/FusionCalculator.js';
 import { canInherit } from '../data/DataParser.js';
 
 const MAX_DEPTH = 20;
@@ -68,6 +68,7 @@ self.onmessage = (e) => {
         }
       }
 
+      newUniquePaths.sort((a, b) => comparePaths(a, b, payload.currentLevel));
       self.postMessage({ type: 'progress', payload: { depth, paths: newUniquePaths } });
 
       if (seenPathKeys.size >= MAX_UNIQUE_PATHS) break;

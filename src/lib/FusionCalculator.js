@@ -353,6 +353,22 @@ function pathUsesCustomSkills(path) {
   return false;
 }
 
+export function comparePaths(a, b, currentLevel) {
+  const aPossible = a._maxLevel <= currentLevel;
+  const bPossible = b._maxLevel <= currentLevel;
+  if (aPossible && !bPossible) return -1;
+  if (!aPossible && bPossible) return 1;
+  if (a._nodeCount !== b._nodeCount) return a._nodeCount - b._nodeCount;
+  if (a._maxLevel !== b._maxLevel) return a._maxLevel - b._maxLevel;
+  if (a._usesCustomSkills && !b._usesCustomSkills) return -1;
+  if (!a._usesCustomSkills && b._usesCustomSkills) return 1;
+  return 0;
+}
+
+export function sortPaths(pathsList, level) {
+  return [...pathsList].sort((a, b) => comparePaths(a, b, level));
+}
+
 export function addPathMetadata(path) {
   path._maxLevel = getPathMaxLevel(path);
   path._nodeCount = getPathNodeCount(path);
@@ -412,22 +428,7 @@ export function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, curre
     }
   }
 
-  allPaths.sort((a, b) => {
-    const aPossible = a._maxLevel <= currentLevel;
-    const bPossible = b._maxLevel <= currentLevel;
-
-    if (aPossible && !bPossible) return -1;
-    if (!aPossible && bPossible) return 1;
-
-    if (a._nodeCount !== b._nodeCount) return a._nodeCount - b._nodeCount;
-
-    if (a._maxLevel !== b._maxLevel) return a._maxLevel - b._maxLevel;
-
-    if (a._usesCustomSkills && !b._usesCustomSkills) return -1;
-    if (!a._usesCustomSkills && b._usesCustomSkills) return 1;
-
-    return 0;
-  });
+  allPaths.sort((a, b) => comparePaths(a, b, currentLevel));
 
   return { paths: allPaths, error: null };
 }

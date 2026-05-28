@@ -2,20 +2,7 @@ import { useMemo, useEffect, useRef, useDeferredValue, useReducer } from 'react'
 import FusionPathViewer from './FusionPathViewer';
 import { Bookmark, X } from 'lucide-react';
 import { findMatchingBookmark } from '../lib/BookmarkManager';
-
-function sortPaths(pathsList, level) {
-  return [...pathsList].sort((a, b) => {
-    const aPossible = a._maxLevel <= level;
-    const bPossible = b._maxLevel <= level;
-    if (aPossible && !bPossible) return -1;
-    if (!aPossible && bPossible) return 1;
-    if (a._nodeCount !== b._nodeCount) return a._nodeCount - b._nodeCount;
-    if (a._maxLevel !== b._maxLevel) return a._maxLevel - b._maxLevel;
-    if (a._usesCustomSkills && !b._usesCustomSkills) return -1;
-    if (!a._usesCustomSkills && b._usesCustomSkills) return 1;
-    return 0;
-  });
-}
+import { sortPaths } from '../lib/FusionCalculator';
 
 const initialState = { paths: null, isCalculating: false, currentSearchDepth: 0, error: null };
 
