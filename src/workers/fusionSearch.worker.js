@@ -1,25 +1,10 @@
-import { searchTree, generateFusionTrees, getPathPersonaNames, getPathMaxLevel, getPathNodeCount } from '../lib/FusionCalculator.js';
+import { searchTree, generateFusionTrees, getPathPersonaNames, addPathMetadata } from '../lib/FusionCalculator.js';
 import { canInherit } from '../data/DataParser.js';
 
 const MAX_DEPTH = 20;
 const MAX_UNIQUE_PATHS = 200;
 const MAX_SEARCH_TIME_MS = 3000;
 let cancelled = false;
-
-function pathUsesCustomSkills(path) {
-  if (path.customProvided && path.customProvided.length > 0) return true;
-  for (const ing of path.ingredients) {
-    if (pathUsesCustomSkills(ing)) return true;
-  }
-  return false;
-}
-
-function addPathMetadata(path) {
-  path._maxLevel = getPathMaxLevel(path);
-  path._nodeCount = getPathNodeCount(path);
-  path._usesCustomSkills = pathUsesCustomSkills(path);
-  return path;
-}
 
 self.onmessage = (e) => {
   const { type, payload } = e.data;
@@ -61,21 +46,21 @@ self.onmessage = (e) => {
 
       if (requiredPersonas && requiredPersonas.length > 0) {
         pathsAtDepth = pathsAtDepth.filter(p => {
-          const namesInPath = getPathPersonaNames(p);
+          const namesInPath = p._personaSet || getPathPersonaNames(p);
           return requiredPersonas.every(name => namesInPath.has(name));
         });
       }
 
       if (excludedPersonas && excludedPersonas.length > 0) {
         pathsAtDepth = pathsAtDepth.filter(p => {
-          const namesInPath = getPathPersonaNames(p);
+          const namesInPath = p._personaSet || getPathPersonaNames(p);
           return !excludedPersonas.some(name => namesInPath.has(name));
         });
       }
 
       const newUniquePaths = [];
       for (const p of pathsAtDepth) {
-        const names = getPathPersonaNames(p);
+        const names = p._personaSet || getPathPersonaNames(p);
         const key = [...names].sort().join(',');
         if (!seenPathKeys.has(key)) {
           seenPathKeys.add(key);

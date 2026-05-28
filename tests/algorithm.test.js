@@ -225,6 +225,13 @@ for (const entries of Object.values(skillLearnedBy)) {
 const arcanaPersonas = {};
 const allPersonas = Object.values(personaData).map(p => p.name);
 const specialRecipeResults = new Set(Object.keys(specialRecipesRaw));
+const ORPHEUS_TELOS = 'Orpheus Telos';
+
+function getMaxInheritedSkills(personaName) {
+  if (personaName === ORPHEUS_TELOS) return 8;
+  if (specialRecipeResults.has(personaName)) return 5;
+  return 4;
+}
 
 for (const p of Object.values(personaData)) {
   if (!arcanaPersonas[p.race]) arcanaPersonas[p.race] = [];
@@ -310,36 +317,27 @@ function getInnateSkills(personaName) {
   return Object.keys(p.skills);
 }
 
-function distributeSkills(skills, numBuckets) {
-  if (skills.length === 0) return [Array.from({length: numBuckets}, () => [])];
-  const restDistributions = distributeSkills(skills.slice(1), numBuckets);
-  const result = [];
-  const skill = skills[0];
-  for (let d = 0; d < restDistributions.length; d++) {
-    const dist = restDistributions[d];
-    for (let i = 0; i < numBuckets; i++) {
-      const newDist = new Array(numBuckets);
-      for (let j = 0; j < numBuckets; j++) {
-        if (j === i) {
-          const copy = dist[j];
-          const len = copy.length;
-          const arr = new Array(len + 1);
-          for (let k = 0; k < len; k++) arr[k] = copy[k];
-          arr[len] = skill;
-          newDist[j] = arr;
-        } else {
-          newDist[j] = dist[j];
-        }
-      }
-      result.push(newDist);
+function* distributeSkills(skills, numBuckets) {
+  const n = skills.length;
+  const total = Math.pow(numBuckets, n);
+  for (let mask = 0; mask < total; mask++) {
+    const buckets = new Array(numBuckets);
+    for (let i = 0; i < numBuckets; i++) buckets[i] = [];
+    let m = mask;
+    for (let i = 0; i < n; i++) {
+      buckets[m % numBuckets].push(skills[i]);
+      m = Math.floor(m / numBuckets);
     }
+    yield buckets;
   }
-  return result;
 }
 
-function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSkills, targetPersonaName) {
+const MAX_PATHS_PER_STATE = 200;
+
+function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSkills, targetPersonaName, maxResults = MAX_PATHS_PER_STATE) {
   const skillsCopy = [...requiredSkills].sort();
-  const memoKey = `${personaName}:${skillsCopy.join(',')}:${maxDepth}`;
+  const capped = maxResults < MAX_PATHS_PER_STATE;
+  const memoKey = capped ? `${personaName}:${skillsCopy.join(',')}:${maxDepth}:c${maxResults}` : `${personaName}:${skillsCopy.join(',')}:${maxDepth}`;
   if (memo[memoKey]) return memo[memoKey];
   const innate = getInnateSkills(personaName);
   const extra = (customPersonaSkills && customPersonaSkills[personaName]) || [];
@@ -347,10 +345,12 @@ function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSk
   const provided = innate.concat(extra);
   const stillRequired = skillsCopy.filter(s => !provided.includes(s));
   if (!stillRequired.every(s => canInherit(personaName, s))) { memo[memoKey] = []; return []; }
+  if (stillRequired.length > getMaxInheritedSkills(personaName)) { memo[memoKey] = []; return []; }
   const innateProvidedInCall = skillsCopy.filter(s => innate.includes(s));
   const customProvidedInCall = skillsCopy.filter(s => extra.includes(s));
   if (stillRequired.length === 0) {
-    const res = [{ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: [] }];
+    const pathSet = new Set([personaName]);
+    const res = [{ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: [], _personaSet: pathSet }];
     memo[memoKey] = res; return res;
   }
   if (hasCustomEntry && personaName !== targetPersonaName) { memo[memoKey] = []; return []; }
@@ -363,16 +363,24 @@ function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSk
       let isAssignmentValid = true; const childPathsCombo = [];
       for (let i = 0; i < ingredients.length; i++) {
         const ing = ingredients[i]; const assignedReqs = assignment[i];
-        let childPaths;
-        if (assignedReqs.length === 0) { childPaths = [{ persona: ing, skillsProvided: [], innateProvided: [], customProvided: [], ingredients: [] }]; }
-        else { childPaths = searchTree(ing, assignedReqs, maxDepth - 1, memo, customPersonaSkills, targetPersonaName); }
-        if (childPaths.length === 0) { isAssignmentValid = false; break; }
-        childPathsCombo.push(childPaths[0]);
+        if (assignedReqs.length > 0 && !assignedReqs.every(s => canInherit(ing, s))) { isAssignmentValid = false; break; }
+        let childPath;
+        if (assignedReqs.length === 0) { childPath = { persona: ing, skillsProvided: [], innateProvided: [], customProvided: [], ingredients: [], _personaSet: new Set([ing]) }; }
+        else {
+          const childPaths = searchTree(ing, assignedReqs, maxDepth - 1, memo, customPersonaSkills, targetPersonaName, 1);
+          if (childPaths.length === 0) { isAssignmentValid = false; break; }
+          childPath = childPaths[0];
+        }
+        childPathsCombo.push(childPath);
       }
       if (isAssignmentValid) {
-        validPaths.push({ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: childPathsCombo });
+        const pathPersonaSet = new Set([personaName]);
+        for (const cp of childPathsCombo) { for (const n of cp._personaSet) pathPersonaSet.add(n); }
+        validPaths.push({ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: childPathsCombo, _personaSet: pathPersonaSet });
+        if (validPaths.length >= maxResults) break;
       }
     }
+    if (validPaths.length >= maxResults) break;
   }
   memo[memoKey] = validPaths; return validPaths;
 }
@@ -384,6 +392,11 @@ function getPathMaxLevel(path) {
 }
 
 function getPathPersonaNames(path, names) {
+  if (path._personaSet) {
+    if (!names) return path._personaSet;
+    for (const n of path._personaSet) names.add(n);
+    return names;
+  }
   if (!names) names = new Set();
   names.add(path.persona);
   for (const ing of path.ingredients) getPathPersonaNames(ing, names);
@@ -413,9 +426,11 @@ function generateFusionTrees(personaName, maxDepth, memo) {
     const ingredientNodes = recipe.ingredients.map(ing => {
       const childTrees = generateFusionTrees(ing, maxDepth - 1, memo);
       if (childTrees.length > 0) return childTrees[0];
-      return { persona: ing, skillsProvided: [], innateProvided: [], customProvided: [], ingredients: [] };
+      return { persona: ing, skillsProvided: [], innateProvided: [], customProvided: [], ingredients: [], _personaSet: new Set([ing]) };
     });
-    results.push({ persona: personaName, skillsProvided: [], innateProvided: [], customProvided: [], ingredients: ingredientNodes });
+    const pathPersonaSet = new Set([personaName]);
+    for (const ing of ingredientNodes) { for (const n of ing._personaSet) pathPersonaSet.add(n); }
+    results.push({ persona: personaName, skillsProvided: [], innateProvided: [], customProvided: [], ingredients: ingredientNodes, _personaSet: pathPersonaSet });
   }
   memo[memoKey] = results; return results;
 }
@@ -428,7 +443,7 @@ function addPathMetadata(path) {
 }
 
 function getPathKey(path) {
-  const names = getPathPersonaNames(path);
+  const names = path._personaSet || getPathPersonaNames(path);
   return [...names].sort().join(',');
 }
 
@@ -451,13 +466,13 @@ function findFusionPaths(targetPersona, targetSkills, maxDepth = 2, currentLevel
     }
     if (requiredPersonas && requiredPersonas.length > 0) {
       pathsAtDepth = pathsAtDepth.filter(p => {
-        const namesInPath = getPathPersonaNames(p);
+        const namesInPath = p._personaSet || getPathPersonaNames(p);
         return requiredPersonas.every(name => namesInPath.has(name));
       });
     }
     if (excludedPersonas && excludedPersonas.length > 0) {
       pathsAtDepth = pathsAtDepth.filter(p => {
-        const namesInPath = getPathPersonaNames(p);
+        const namesInPath = p._personaSet || getPathPersonaNames(p);
         return !excludedPersonas.some(name => namesInPath.has(name));
       });
     }

@@ -11,10 +11,16 @@ function getFuseLevel(pData, innateProvided) {
   return learnedLevels.length > 0 ? Math.max(...learnedLevels) : pData.lvl;
 }
 
+const PAGE_SIZE = 30;
+
 export default function FusionPathViewer({ paths, excludedPersonas = [], onExcludePersona }) {
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const pathList = paths || [];
+  const hasMore = pathList.length > visibleCount;
+
   return (
     <div className="fusion-paths-container">
-      {(paths || []).map((path, index) => (
+      {pathList.slice(0, visibleCount).map((path, index) => (
         <div key={index} className="path-card" style={{
           background: 'rgba(0, 0, 0, 0.2)',
           border: '1px solid var(--glass-border)',
@@ -28,6 +34,17 @@ export default function FusionPathViewer({ paths, excludedPersonas = [], onExclu
           <TreeNode node={path} isRoot={true} excludedPersonas={excludedPersonas} onExcludePersona={onExcludePersona} />
         </div>
       ))}
+      {hasMore && (
+        <div style={{ textAlign: 'center', marginTop: '12px' }}>
+          <button
+            onClick={() => setVisibleCount(v => v + PAGE_SIZE)}
+            className="p3r-btn"
+            style={{ padding: '8px 24px', cursor: 'pointer' }}
+          >
+            Show {Math.min(PAGE_SIZE, pathList.length - visibleCount)} more paths ({pathList.length - visibleCount} remaining)
+          </button>
+        </div>
+      )}
     </div>
   );
 }
