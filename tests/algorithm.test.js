@@ -33,6 +33,7 @@ for (const [key, row] of Object.entries(skillDataRaw)) {
   skillData[name] = {
     name, elem, target, rank, id: key,
     cost: row.b[1] >= 1000 ? row.b[1] % 1000 : row.b[1],
+    costType: row.b[1] >= 1000 ? 'SP' : (row.b[1] > 0 ? 'HP' : null),
     power: row.b[2],
     statusEffect: row.c[0] === '-' ? null : row.c[0],
     effectDesc: row.c[1] === '-' ? null : row.c[1],
@@ -889,6 +890,18 @@ console.log('\n── SP Cost Decoding ──');
   // Theurgy / special skills decode correctly
   assert(cost('Cadenza') === 1, 'Cadenza (theurgy): 1 SP');
   assert(cost('Armageddon') === 1, 'Armageddon (theurgy): 1 SP');
+
+  // Cost type: physical = HP, magic = SP, passive = null
+  const ct = (name) => skillData[name].costType;
+  assert(ct('Power Slash') === 'HP', 'Power Slash: HP cost');
+  assert(ct('Bash') === 'HP', 'Bash: HP cost');
+  assert(ct('Tempest Slash') === 'HP', 'Tempest Slash: HP cost');
+  assert(ct('Brave Blade') === 'HP', 'Brave Blade: HP cost');
+  assert(ct('Agi') === 'SP', 'Agi: SP cost');
+  assert(ct('Dia') === 'SP', 'Dia: SP cost');
+  assert(ct('Charge') === 'SP', 'Charge: SP cost');
+  assert(ct('Elec Boost') === null, 'Elec Boost (passive): null costType');
+  assert(ct('Cadenza') === 'SP', 'Cadenza (theurgy): SP cost');
 }
 
 // ── 11. Skill Effect Descriptions ───────────────────────────────

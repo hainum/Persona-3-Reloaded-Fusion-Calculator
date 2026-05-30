@@ -8,19 +8,35 @@
     "type": "link_episode"
   },
   "Scathach": {
-    "description": "Complete all of Fuuka's Link Episodes",
-    "type": "link_episode"
+    "description": "Max the Priestess Social Link (Fuuka Yamagishi)",
+    "type": "social_link_max"
   },
   "Alilat": {
-    "description": "Complete all of Mitsuru's Link Episodes",
-    "type": "link_episode"
+    "description": "Max the Empress Social Link (Mitsuru Kirijo)",
+    "type": "social_link_max"
   },
   "King Frost": {
+    "description": "Complete Elizabeth Request 24: Create a Persona level 23 or above",
+    "type": "request"
+  },
+  "Odin": {
+    "description": "Max the Emperor Social Link (Hidetoshi Odagiri)",
+    "type": "social_link_max"
+  },
+  "Michael": {
+    "description": "Complete all of Ken's Link Episodes",
+    "type": "link_episode"
+  },
+  "Horus": {
     "description": "Complete all of Akihiko's Link Episodes",
     "type": "link_episode"
   },
-  "Odin": {
-    "description": "Complete all of Ken's Link Episodes",
+  "Hell Biker": {
+    "description": "Complete all of Shinjiro's Link Episodes",
+    "type": "link_episode"
+  },
+  "Saturnus": {
+    "description": "Complete all of Ryoji's Link Episodes",
     "type": "link_episode"
   },
   "Attis": {

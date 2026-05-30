@@ -237,7 +237,7 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
                       <Lock size={16} style={{ color: 'var(--p3r-cyan)', verticalAlign: 'middle' }} />
                     </span>
                     <span className="elem-badge" style={{ marginLeft: '8px', fontSize: '0.65rem', padding: '2px 8px', background: 'rgba(255, 193, 7, 0.15)', color: '#ffd54f', borderColor: 'rgba(255, 193, 7, 0.3)', verticalAlign: 'middle' }}>
-                      {unlockRequirements[personaName].type === 'dlc' ? 'DLC' : unlockRequirements[personaName].type === 'link_episode' ? 'Link Episode' : 'Unlockable'}
+                      {unlockRequirements[personaName].type === 'dlc' ? 'DLC' : unlockRequirements[personaName].type === 'link_episode' ? 'Link Episode' : unlockRequirements[personaName].type === 'social_link_max' ? 'Social Link' : 'Unlockable'}
                     </span>
                   </>
                 )}
@@ -289,7 +289,7 @@ function PersonaDetail({ personaName, onBack, onBookmarkConfig }) {
                     <td>{s.learnLevel < 1 ? <span className="innate-chip">Innate</span> : s.learnLevel > 99 ? <span className="theurgy-chip">Theurgy</span> : s.learnLevel}</td>
                     <td><span className="elem-badge">{ELEM_LABELS[s.elem] || s.elem.toUpperCase()}</span></td>
                     <td style={{ color: 'var(--p3r-text-muted)', maxWidth: '260px' }}>{getEffect(s)}</td>
-                    <td>{s.cost > 0 ? `${s.cost} SP` : '\u2014'}</td>
+                    <td>{s.cost > 0 ? `${s.cost} ${s.costType || 'SP'}` : '\u2014'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -710,7 +710,7 @@ export default function PersonaDatabase({ bookmarks = [], personaOptions = [], s
                           </td>
                           <td><span className="elem-badge">{ELEM_LABELS[s.elem] || s.elem.toUpperCase()}</span></td>
                           <td style={{ maxWidth: '300px', fontSize: '0.9rem', color: 'var(--p3r-text-muted)' }}>{getEffect(s)}</td>
-                          <td>{s.cost > 0 ? `${s.cost} SP` : '\u2014'}</td>
+                          <td>{s.cost > 0 ? `${s.cost} ${s.costType || 'SP'}` : '\u2014'}</td>
                           <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>
                             {learners ? (() => {
                               const normalLevels = learners.map(l => l.level < 1 ? (personaData[l.personaName]?.lvl ?? l.level) : l.level).filter(l => l <= 99);

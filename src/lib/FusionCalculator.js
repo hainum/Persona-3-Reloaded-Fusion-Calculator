@@ -70,16 +70,24 @@ export function getNormalFusionResult(personaA, personaB) {
     }
     return result;
   } else {
-    // Find the one closest to avg, excluding specials (tiebreak: higher level)
+    // P3R different-race: find lowest-level non-special persona >= ceil(avg)
+    const target = Math.ceil(avg);
     let result = null;
-    let bestDist = Infinity;
     for (let i = 0; i < candidatePersonas.length; i++) {
       const p = candidatePersonas[i];
       if (specialRecipeResults.has(p.name)) continue;
-      const dist = Math.abs(p.lvl - avg);
-      if (dist < bestDist || (dist === bestDist && (!result || p.lvl > result.lvl))) {
+      if (p.lvl >= target) {
         result = p;
-        bestDist = dist;
+        break;
+      }
+    }
+    // If none >= target, take the highest-level non-special
+    if (!result) {
+      for (let i = candidatePersonas.length - 1; i >= 0; i--) {
+        const p = candidatePersonas[i];
+        if (specialRecipeResults.has(p.name)) continue;
+        result = p;
+        break;
       }
     }
     return result;

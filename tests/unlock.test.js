@@ -40,7 +40,7 @@ function group(name, fn) {
 
 console.log('\n\u2550\u2550\u2550\u2550 Unlock Requirements Tests \u2550\u2550\u2550\u2550');
 
-const VALID_TYPES = ['link_episode', 'request', 'dlc'];
+const VALID_TYPES = ['link_episode', 'request', 'dlc', 'social_link_max'];
 
 group('Data File Integrity', () => {
   assert(typeof unlockRequirementsRaw === 'object' && unlockRequirementsRaw !== null && !Array.isArray(unlockRequirementsRaw),
@@ -94,6 +94,10 @@ group('Description Format', () => {
       assert(req.description.toLowerCase().includes('request') || req.description.toLowerCase().includes('elizabeth'),
         `"${personaName}" request description mentions Request or Elizabeth`);
     }
+    if (req.type === 'social_link_max') {
+      assert(req.description.toLowerCase().includes('max the'),
+        `"${personaName}" social_link_max description mentions "Max the"`);
+    }
   }
 });
 
@@ -144,8 +148,29 @@ group('Link Episode Integrity', () => {
 
   // Specific Link Episode persona checks
   assert(lePersonas.includes('Byakko'), 'Byakko is marked as link_episode');
-  assert(lePersonas.includes('Alilat'), 'Alilat is marked as link_episode');
-  assert(lePersonas.includes('King Frost'), 'King Frost is marked as link_episode');
+  assert(lePersonas.includes('Surt'), 'Surt is marked as link_episode');
+  assert(lePersonas.includes('Michael'), 'Michael is marked as link_episode');
+  assert(lePersonas.includes('Horus'), 'Horus is marked as link_episode');
+  assert(lePersonas.includes('Hell Biker'), 'Hell Biker is marked as link_episode');
+  assert(lePersonas.includes('Saturnus'), 'Saturnus is marked as link_episode');
+});
+
+group('Social Link Max Integrity', () => {
+  const slPersonas = Object.entries(unlockRequirementsRaw)
+    .filter(([, req]) => req.type === 'social_link_max')
+    .map(([name]) => name);
+
+  assert(slPersonas.length >= 3,
+    `Has at least 3 Social Link max personas (found ${slPersonas.length})`);
+
+  for (const name of slPersonas) {
+    assert(demonDataRaw[name] !== undefined,
+      `Social Link max persona "${name}" exists in demon-data.json`);
+  }
+
+  assert(slPersonas.includes('Scathach'), 'Scathach is marked as social_link_max');
+  assert(slPersonas.includes('Alilat'), 'Alilat is marked as social_link_max');
+  assert(slPersonas.includes('Odin'), 'Odin is marked as social_link_max');
 });
 
 group('Export from DataParser', async () => {
