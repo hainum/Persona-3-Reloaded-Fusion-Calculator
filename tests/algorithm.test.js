@@ -262,26 +262,24 @@ function getNormalFusionResult(personaA, personaB) {
   const candidatePersonas = arcanaPersonas[resultRace];
   if (!candidatePersonas) return null;
   const isSameRace = personaA.race === personaB.race;
-  const targetLevel = Math.floor((personaA.lvl + personaB.lvl) / 2) + (isSameRace ? 0 : 1);
+  const avg = (personaA.lvl + personaB.lvl) / 2;
 
   if (isSameRace) {
+    const cap = avg + 1;
     let best = null;
-    let bestDiff = Infinity;
-    const avg = (personaA.lvl + personaB.lvl) / 2;
     for (const p of candidatePersonas) {
       if (p.name === personaA.name || p.name === personaB.name || specialRecipeResults.has(p.name)) continue;
-      const diff = Math.abs(p.lvl - avg);
-      if (diff < bestDiff || (diff === bestDiff && (!best || p.lvl > best.lvl))) {
+      if (p.lvl <= cap && (!best || p.lvl > best.lvl)) {
         best = p;
-        bestDiff = diff;
       }
     }
     return best;
   } else {
+    const target = Math.floor(avg) + 1;
     let result = null;
     for (let i = 0; i < candidatePersonas.length; i++) {
       const p = candidatePersonas[i];
-      if (p.lvl >= targetLevel && !specialRecipeResults.has(p.name)) { result = p; break; }
+      if (p.lvl >= target && !specialRecipeResults.has(p.name)) { result = p; break; }
     }
     if (!result) {
       for (let i = candidatePersonas.length - 1; i >= 0; i--) {

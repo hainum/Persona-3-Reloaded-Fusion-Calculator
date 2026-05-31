@@ -58,22 +58,20 @@ export function getNormalFusionResult(personaA, personaB) {
   const avg = (personaA.lvl + personaB.lvl) / 2;
 
   if (isSameRace) {
-    // P3R same-race: find persona whose level is closest to avg,
-    // excluding A, B, and specials. Ties go to the higher-level persona.
+    // P3R same-race: find highest-level persona <= avg + 1,
+    // excluding A, B, and specials
+    const cap = avg + 1;
     let best = null;
-    let bestDiff = Infinity;
     for (const p of candidatePersonas) {
       if (p.name === personaA.name || p.name === personaB.name || specialRecipeResults.has(p.name)) continue;
-      const diff = Math.abs(p.lvl - avg);
-      if (diff < bestDiff || (diff === bestDiff && (!best || p.lvl > best.lvl))) {
+      if (p.lvl <= cap && (!best || p.lvl > best.lvl)) {
         best = p;
-        bestDiff = diff;
       }
     }
     return best;
   } else {
-    // P3R different-race: find lowest-level non-special persona >= ceil(avg)
-    const target = Math.ceil(avg);
+    // P3R different-race: find lowest-level non-special persona >= floor(avg) + 1
+    const target = Math.floor(avg) + 1;
     let result = null;
     for (let i = 0; i < candidatePersonas.length; i++) {
       const p = candidatePersonas[i];

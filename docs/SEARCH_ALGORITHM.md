@@ -67,9 +67,9 @@ Every Persona is grouped into a map keyed by its arcana (called `race` in the da
 Given two Personas **A** and **B**:
 
 1. Look up the **result arcana** from the lower-triangular fusion chart using both Personas' arcanas.
-2. Compute the **average level**: `(lvlA + lvlB) / 2`.
-   - **Same arcana** → find the Persona whose level is **closest** to the average, excluding A, B, and specials. Ties go to the higher-level persona. This is the P3R same-race formula.
-   - **Different arcana** → offset = 1, scan **upward** from `targetLevel` (lowest Persona ≥ target level, excluding specials).
+2. Compute the **average level**: `avg = (lvlA + lvlB) / 2`.
+   - **Same arcana** → find the **highest-level Persona ≤ avg + 1**, excluding A, B, and specials. Verified in-game: Abaddon(76,Devil) × Baphomet(30,Devil) → Succubus(47) [avg=53, cap=54, highest Devil ≤ 54].
+   - **Different arcana** → `target = Math.floor(avg) + 1`; find the **lowest-level non-special Persona ≥ target**, falling back to the highest-level non-special if none exist. Verified in-game: Alice(68,Death) × Kaiwan(42,Star) → Horus(67) [avg=55, target=56, first Sun ≥ 56]; Nebiros(52,Hermit) × Trumpeter(59,Judgement) → Byakko(63) [avg=55.5, target=56, first Temperance ≥ 56].
 3. Special-recipe Personas are always excluded from normal fusion results.
 
 ### 1.3 Recipe Map (`recipeMap`)
