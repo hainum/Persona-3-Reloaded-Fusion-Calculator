@@ -66,6 +66,7 @@ const FMT_DESC = {
     else if (s.statusEffect) desc += ` (${s.statusEffect})`;
     return desc;
   },
+  FMTFirmStance: (s) => `Halves ${s.statusEffect} but cannot dodge`,
   FMTFoulBreathN: () => 'Increase foe ailment susceptibility for 3 turns',
   FMTFracDamage: (s) => `Reduce ${s.target} HP by 1/2`,
   FMTGrowthN: (s) => `Earn ${s.ailmentChance}% exp when not in battle`,

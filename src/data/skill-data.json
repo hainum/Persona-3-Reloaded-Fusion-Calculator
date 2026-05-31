@@ -540,7 +540,7 @@
   "846": { "a": ["Growth 2", "pas", "-"], "b": [4, 0, 0, 0, 0, 0, 0, 50], "c": ["exp", "FMTGrowthN", "Sword 6"] },
   "847": { "a": ["Growth 3", "pas", "-"], "b": [6, 0, 0, 0, 0, 0, 0, 100], "c": ["exp", "FMTGrowthN", "Sword 9"] },
   "848": { "a": ["Ali Dance", "pas", "-"], "b": [8, 0, 0, 0, 0, 0, 0, 1050], "c": ["incoming hit rate", "FMTTimes", "-"] },
-  "849": { "a": ["Firm Stance", "pas", "-"], "b": [8, 0, 0, 0, 0, 0, 0, 1050], "c": ["dmg taken", "$2 x$1 but cannot dodge", "-"] },
+  "849": { "a": ["Firm Stance", "pas", "-"], "b": [8, 0, 0, 0, 0, 0, 0, 1050], "c": ["dmg taken", "FMTFirmStance", "-"] },
   "850": { "a": ["Survive Light", "pas", "-"], "b": [4, 0, 0, 0, 0, 0, 0, 50], "c": ["Light instakill", "$1% chance to endure $2", "-"] },
   "851": { "a": ["Endure Light", "pas", "-"], "b": [5, 0, 0, 0, 0, 0, 0, 100], "c": ["Light instakill", "$1% chance to endure $2", "-"] },
   "852": { "a": ["Survive Dark", "pas", "-"], "b": [4, 0, 0, 0, 0, 0, 0, 50], "c": ["Dark instakill", "$1% chance to endure $2", "-"] },

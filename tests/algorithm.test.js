@@ -117,6 +117,7 @@ const FMT_DESC = {
     else if (s.statusEffect) desc += ` (${s.statusEffect})`;
     return desc;
   },
+  FMTFirmStance: (s) => `Halves ${s.statusEffect} but cannot dodge`,
   FMTFoulBreathN: () => 'Increase foe ailment susceptibility for 3 turns',
   FMTFracDamage: (s) => `Reduce ${s.target} HP by 1/2`,
   FMTGrowthN: (s) => `Earn ${s.ailmentChance}% exp when not in battle`,
@@ -955,6 +956,9 @@ console.log('\n── Skill Effect Descriptions ──');
   assert(eff('Buff Amp') === 'Greatly -kaja effects on self up', 'Buff Amp: Greatly -kaja effects on self up');
   assert(eff('Weakness Buffer') === 'Reduces all weakness dmg taken', 'Weakness Buffer: Reduces all weakness dmg taken');
   assert(eff('Weakness Mitigator') === 'Greatly reduces all weakness dmg taken', 'Weakness Mitigator: Greatly reduces all weakness dmg taken');
+
+  // Firm Stance uses FMTFirmStance
+  assert(eff('Firm Stance') === 'Halves dmg taken but cannot dodge', 'Firm Stance: Halves dmg taken but cannot dodge');
 }
 
 // ── 12. skillLearnedBy includes innate skills ──────────────────
