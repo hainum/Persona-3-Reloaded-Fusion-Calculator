@@ -152,7 +152,7 @@ export default function App() {
   };
 
   const handleSaveCustomPersona = (name, skills) => {
-    setCustomPersonas(prev => ({ ...prev, [name]: skills }));
+    setCustomPersonas(prev => ({ ...prev, [name]: skills.slice(0, 8) }));
   };
 
   const handleDeleteCustomPersona = (name) => {

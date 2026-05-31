@@ -67,8 +67,8 @@ Every Persona is grouped into a map keyed by its arcana (called `race` in the da
 Given two Personas **A** and **B**:
 
 1. Look up the **result arcana** from the lower-triangular fusion chart using both Personas' arcanas.
-2. Compute the **target level**: `floor((lvlA + lvlB) / 2) + offset`.
-   - **Same arcana** → offset = 0, scan **downward** from `targetLevel` (highest Persona ≤ target level, excluding A, B, and specials).
+2. Compute the **average level**: `(lvlA + lvlB) / 2`.
+   - **Same arcana** → find the Persona whose level is **closest** to the average, excluding A, B, and specials. Ties go to the higher-level persona. This is the P3R same-race formula.
    - **Different arcana** → offset = 1, scan **upward** from `targetLevel` (lowest Persona ≥ target level, excluding specials).
 3. Special-recipe Personas are always excluded from normal fusion results.
 

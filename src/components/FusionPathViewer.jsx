@@ -15,8 +15,26 @@ const PAGE_SIZE = 30;
 
 export default function FusionPathViewer({ paths, excludedPersonas = [], onExcludePersona }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef(null);
   const pathList = paths || [];
   const hasMore = pathList.length > visibleCount;
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount(v => v + PAGE_SIZE);
+        }
+      },
+      { rootMargin: '400px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, pathList.length]);
 
   return (
     <div className="fusion-paths-container">
@@ -34,17 +52,7 @@ export default function FusionPathViewer({ paths, excludedPersonas = [], onExclu
           <TreeNode node={path} isRoot={true} excludedPersonas={excludedPersonas} onExcludePersona={onExcludePersona} />
         </div>
       ))}
-      {hasMore && (
-        <div style={{ textAlign: 'center', marginTop: '12px' }}>
-          <button
-            onClick={() => setVisibleCount(v => v + PAGE_SIZE)}
-            className="p3r-btn"
-            style={{ padding: '8px 24px', cursor: 'pointer' }}
-          >
-            Show {Math.min(PAGE_SIZE, pathList.length - visibleCount)} more paths ({pathList.length - visibleCount} remaining)
-          </button>
-        </div>
-      )}
+      {hasMore && <div ref={sentinelRef} style={{ height: '1px' }} />}
     </div>
   );
 }
@@ -76,7 +84,7 @@ function TreeNode({ node, isRoot, excludedPersonas, onExcludePersona }) {
 
   if (!node) return null;
 
-  const { persona, ingredients, skillsProvided, innateProvided = [] } = node;
+  const { persona, ingredients, skillsProvided, innateProvided = [], _usesCustom } = node;
   const pData = personaData[persona];
   const fuseLevel = getFuseLevel(pData, innateProvided);
   const recipes = getAllRecipes(persona);
@@ -110,6 +118,16 @@ function TreeNode({ node, isRoot, excludedPersonas, onExcludePersona }) {
             <span style={{ fontSize: '0.8rem', opacity: 0.7, marginLeft: '6px', fontWeight: 400 }}>
               (Lv.{fuseLevel})
             </span>
+            {_usesCustom && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', marginLeft: '6px',
+                fontSize: '0.65rem', color: '#ff9800', border: '1px solid #ff9800',
+                borderRadius: '4px', padding: '0 5px', fontWeight: 600, letterSpacing: '0.5px',
+                lineHeight: '1.4'
+              }}>
+                Custom
+              </span>
+            )}
           </strong>
           {!isRoot && onExcludePersona && !excludedPersonas.includes(persona) && (
             <span

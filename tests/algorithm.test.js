@@ -265,14 +265,18 @@ function getNormalFusionResult(personaA, personaB) {
   const targetLevel = Math.floor((personaA.lvl + personaB.lvl) / 2) + (isSameRace ? 0 : 1);
 
   if (isSameRace) {
-    let result = null;
-    for (let i = candidatePersonas.length - 1; i >= 0; i--) {
-      const p = candidatePersonas[i];
-      if (p.lvl <= targetLevel && p.name !== personaA.name && p.name !== personaB.name && !specialRecipeResults.has(p.name)) {
-        result = p; break;
+    let best = null;
+    let bestDiff = Infinity;
+    const avg = (personaA.lvl + personaB.lvl) / 2;
+    for (const p of candidatePersonas) {
+      if (p.name === personaA.name || p.name === personaB.name || specialRecipeResults.has(p.name)) continue;
+      const diff = Math.abs(p.lvl - avg);
+      if (diff < bestDiff || (diff === bestDiff && (!best || p.lvl > best.lvl))) {
+        best = p;
+        bestDiff = diff;
       }
     }
-    return result;
+    return best;
   } else {
     let result = null;
     for (let i = 0; i < candidatePersonas.length; i++) {
@@ -344,7 +348,7 @@ function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSk
   const innate = getInnateSkills(personaName);
   const extra = (customPersonaSkills && customPersonaSkills[personaName]) || [];
   const hasCustomEntry = customPersonaSkills && customPersonaSkills[personaName] !== undefined;
-  const provided = innate.concat(extra);
+  const provided = hasCustomEntry && extra.length >= 8 ? [...extra] : innate.concat(extra);
   const stillRequired = skillsCopy.filter(s => !provided.includes(s));
   if (!stillRequired.every(s => canInherit(personaName, s))) { memo[memoKey] = []; return []; }
   if (stillRequired.length > getMaxInheritedSkills(personaName)) { memo[memoKey] = []; return []; }
@@ -352,7 +356,7 @@ function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSk
   const customProvidedInCall = skillsCopy.filter(s => extra.includes(s));
   if (stillRequired.length === 0) {
     const pathSet = new Set([personaName]);
-    const res = [{ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: [], _personaSet: pathSet }];
+    const res = [{ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: [], _personaSet: pathSet, _usesCustom: hasCustomEntry }];
     memo[memoKey] = res; return res;
   }
   if (hasCustomEntry && personaName !== targetPersonaName) { memo[memoKey] = []; return []; }
@@ -378,7 +382,7 @@ function searchTree(personaName, requiredSkills, maxDepth, memo, customPersonaSk
       if (isAssignmentValid) {
         const pathPersonaSet = new Set([personaName]);
         for (const cp of childPathsCombo) { for (const n of cp._personaSet) pathPersonaSet.add(n); }
-        validPaths.push({ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: childPathsCombo, _personaSet: pathPersonaSet });
+        validPaths.push({ persona: personaName, skillsProvided: skillsCopy, innateProvided: innateProvidedInCall, customProvided: customProvidedInCall, ingredients: childPathsCombo, _personaSet: pathPersonaSet, _usesCustom: hasCustomEntry });
         if (validPaths.length >= maxResults) break;
       }
     }
