@@ -6,7 +6,7 @@ import BookmarkDrawer from './components/BookmarkDrawer';
 import { SaveBookmarkModal } from './components/BookmarkModal';
 import CustomPersonaModal from './components/CustomPersonaModal';
 import SkillSearch from './components/SkillSearch';
-import { personaData, skillData, isSkillInheritable, canInherit, getMaxInheritedSkills } from './data/DataParser';
+import { personaData, skillData, isSkillInheritable, canInherit } from './data/DataParser';
 import { loadBookmarks, saveBookmarks, createBookmark } from './lib/BookmarkManager';
 import { Zap, Search, X, Calculator, Database, Bookmark, BookmarkPlus, AlertTriangle } from 'lucide-react';
 
@@ -78,7 +78,12 @@ export default function App() {
   }, [customPersonas]);
 
   const handleSaveBookmark = (config) => {
-    const bookmark = createBookmark(config);
+    const naturalSet = new Set(getNaturalSkills(config.targetPersona));
+    const cleanConfig = {
+      ...config,
+      targetSkills: config.targetSkills.filter(s => !naturalSet.has(s)),
+    };
+    const bookmark = createBookmark(cleanConfig);
     setBookmarks(prev => [...prev, bookmark]);
   };
 
@@ -91,15 +96,23 @@ export default function App() {
       if (b.id !== bookmarkId) return b;
       if (b.targetSkills.includes(skillName)) return b;
       if (b.targetPersona && !canInherit(b.targetPersona, skillName)) return b;
-      if (b.targetPersona && b.targetSkills.length >= getMaxInheritedSkills(b.targetPersona)) return b;
+      const naturalSet = new Set(getNaturalSkills(b.targetPersona));
+      const nonNaturalCount = b.targetSkills.filter(s => !naturalSet.has(s)).length;
+      if (nonNaturalCount >= 8) return b;
       return { ...b, targetSkills: [...b.targetSkills, skillName] };
     }));
+  };
+
+  const getNaturalSkills = (personaName) => {
+    const skills = personaData[personaName]?.skills;
+    return skills ? Object.keys(skills) : [];
   };
 
   const handleLoadBookmark = (b) => {
     setView('calculator');
     setTargetPersona(b.targetPersona);
-    setTargetSkills([...b.targetSkills]);
+    const naturalSet = new Set(getNaturalSkills(b.targetPersona));
+    setTargetSkills(b.targetSkills.filter(s => !naturalSet.has(s)));
     setRequiredPersonas(b.requiredPersonas);
   };
 

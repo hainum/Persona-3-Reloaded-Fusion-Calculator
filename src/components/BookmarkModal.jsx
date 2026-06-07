@@ -3,11 +3,22 @@ import { X, AlertTriangle } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import SkillSearch from './SkillSearch';
 import { generateBookmarkName } from '../lib/BookmarkManager';
-import { canInherit, getMaxInheritedSkills } from '../data/DataParser';
+import { canInherit, personaData } from '../data/DataParser';
 
 export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequiredPersonas, personaOptions, skillOptions, onSave, onClose }) {
+  const getNaturalSkills = (personaName) => {
+    const skills = personaData[personaName]?.skills;
+    return skills ? Object.keys(skills) : [];
+  };
+
+  const stripNaturalSkills = (personaName, skills) => {
+    if (!personaName) return skills;
+    const naturalSet = new Set(getNaturalSkills(personaName));
+    return skills.filter(s => !naturalSet.has(s));
+  };
+
   const [targetPersona, setTargetPersona] = useState(initialPersona || '');
-  const [targetSkills, setTargetSkills] = useState(initialSkills || []);
+  const [targetSkills, setTargetSkills] = useState(stripNaturalSkills(initialPersona, initialSkills || []));
   const [requiredPersonas, setRequiredPersonas] = useState(initialRequiredPersonas || []);
   const [name, setName] = useState('');
 
@@ -22,7 +33,7 @@ export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequir
 
   const handleAddSkill = (name) => {
     if (!name || targetSkills.includes(name)) return;
-    if (targetPersona && targetSkills.length >= getMaxInheritedSkills(targetPersona)) return;
+    if (targetSkills.length >= 8) return;
     setTargetSkills(prev => [...prev, name]);
   };
 
@@ -83,16 +94,14 @@ export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequir
 
         <div style={{ marginBottom: '16px' }}>
           <label style={{ fontSize: '0.85rem', color: 'var(--p3r-text-muted)', marginBottom: '4px', display: 'block' }}>Target Skills</label>
-          {targetPersona && (
-            <span style={{ fontSize: '0.8rem', color: 'var(--p3r-text-muted)', display: 'block', marginBottom: '0.5rem' }}>
-              {targetSkills.length}/{getMaxInheritedSkills(targetPersona)} skills
-            </span>
-          )}
+          <span style={{ fontSize: '0.8rem', color: 'var(--p3r-text-muted)', display: 'block', marginBottom: '0.5rem' }}>
+            {targetSkills.length}/8 skills
+          </span>
           <SkillSearch
             skillOptions={skillOptions}
             selectedSkills={targetSkills}
             onSelect={handleAddSkill}
-            isFull={targetPersona ? targetSkills.length >= getMaxInheritedSkills(targetPersona) : false}
+            isFull={targetSkills.length >= 8}
           />
           {targetSkills.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
@@ -172,6 +181,16 @@ export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequir
 }
 
 export function AddSkillToBookmarkModal({ skillName, bookmarks, onAdd, onClose }) {
+  const getNaturalSkills = (personaName) => {
+    const skills = personaData[personaName]?.skills;
+    return skills ? Object.keys(skills) : [];
+  };
+
+  const countNonNatural = (b) => {
+    const naturalSet = new Set(getNaturalSkills(b.targetPersona));
+    return b.targetSkills.filter(s => !naturalSet.has(s)).length;
+  };
+
   return (
     <>
       <div className="modal-overlay open" onClick={onClose} />
@@ -190,8 +209,8 @@ export function AddSkillToBookmarkModal({ skillName, bookmarks, onAdd, onClose }
             {[...bookmarks].reverse().map(b => {
               const alreadyHas = b.targetSkills.includes(skillName);
               const cannotInherit = b.targetPersona && !canInherit(b.targetPersona, skillName);
-              const maxSlots = b.targetPersona ? getMaxInheritedSkills(b.targetPersona) : Infinity;
-              const wouldOverflow = !alreadyHas && b.targetSkills.length >= maxSlots;
+              const nonNaturalCount = countNonNatural(b);
+              const wouldOverflow = !alreadyHas && nonNaturalCount >= 8;
               const isDisabled = alreadyHas || cannotInherit || wouldOverflow;
               return (
                 <div
@@ -203,12 +222,12 @@ export function AddSkillToBookmarkModal({ skillName, bookmarks, onAdd, onClose }
                   <div className="flex-col" style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{b.name}</div>
                     <div className="text-muted" style={{ fontSize: '0.8rem' }}>
-                      {b.targetPersona} {'\u00b7'} {b.targetSkills.length} skills
+                      {b.targetPersona} {'\u00b7'} {nonNaturalCount} skill{nonNaturalCount !== 1 ? 's' : ''}
                     </div>
                   </div>
                   {alreadyHas && <span style={{ fontSize: '0.75rem', color: 'var(--p3r-text-muted)' }}>Added</span>}
                   {cannotInherit && <span style={{ fontSize: '0.75rem', color: '#ff9999' }}>Incompatible</span>}
-                  {wouldOverflow && <span style={{ fontSize: '0.75rem', color: '#ff9999' }}>Full ({maxSlots} max)</span>}
+                  {wouldOverflow && <span style={{ fontSize: '0.75rem', color: '#ff9999' }}>Full (8 max)</span>}
                 </div>
               );
             })}

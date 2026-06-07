@@ -1,5 +1,16 @@
 import { Bookmark, Trash2, X, AlertTriangle } from 'lucide-react';
-import { canInherit, getMaxInheritedSkills } from '../data/DataParser';
+import { canInherit, personaData } from '../data/DataParser';
+
+function getNaturalSkills(personaName) {
+  const skills = personaData[personaName]?.skills;
+  return skills ? Object.keys(skills) : [];
+}
+
+function countNonNatural(personaName, skills) {
+  if (!personaName) return skills.length;
+  const naturalSet = new Set(getNaturalSkills(personaName));
+  return skills.filter(s => s && !naturalSet.has(s)).length;
+}
 
 export default function BookmarkDrawer({ bookmarks, isOpen, onClose, onLoad, onDelete }) {
   return (
@@ -23,10 +34,7 @@ export default function BookmarkDrawer({ bookmarks, isOpen, onClose, onLoad, onD
               const incompatibleSkills = b.targetPersona
                 ? b.targetSkills.filter(s => s && !canInherit(b.targetPersona, s))
                 : [];
-              const maxSlots = b.targetPersona ? getMaxInheritedSkills(b.targetPersona) : 4;
-              const slotOverflow = b.targetPersona
-                ? Math.max(0, b.targetSkills.length - maxSlots)
-                : 0;
+              const skillCount = countNonNatural(b.targetPersona, b.targetSkills);
               return (
                 <div
                   key={b.id}
@@ -37,17 +45,12 @@ export default function BookmarkDrawer({ bookmarks, isOpen, onClose, onLoad, onD
                     <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--p3r-text)' }}>{b.name}</div>
                     <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '2px' }}>
                       {b.targetPersona}
-                      {b.targetSkills.length > 0 ? ` \u00b7 ${b.targetSkills.length} skill${b.targetSkills.length !== 1 ? 's' : ''}` : ''}
+                      {skillCount > 0 ? ` \u00b7 ${skillCount} skill${skillCount !== 1 ? 's' : ''}` : ''}
                       {b.requiredPersonas.length > 0 ? ` \u00b7 incl. ${b.requiredPersonas.length}` : ''}
                     </div>
                     {incompatibleSkills.length > 0 && (
                       <div style={{ fontSize: '0.75rem', color: '#ffd54f', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <AlertTriangle size={12} /> {incompatibleSkills.length} incompatible skill{incompatibleSkills.length !== 1 ? 's' : ''}
-                      </div>
-                    )}
-                    {slotOverflow > 0 && (
-                      <div style={{ fontSize: '0.75rem', color: '#ff9999', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <AlertTriangle size={12} /> {slotOverflow} excess skill{slotOverflow !== 1 ? 's' : ''} (max {maxSlots})
                       </div>
                     )}
                   </div>
