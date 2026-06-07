@@ -88,6 +88,13 @@ export default function SearchResultsPanel(props) {
     if (searchKey === 0) return;
 
     cancelSearch();
+
+    const p = propsRef.current;
+    if (!p.targetPersona) {
+      dispatch({ type: 'done' });
+      return;
+    }
+
     dispatch({ type: 'start' });
 
     if (!workerRef.current || !workerHealthyRef.current) {
@@ -96,7 +103,6 @@ export default function SearchResultsPanel(props) {
       workerHealthyRef.current = true;
     }
     const w = workerRef.current;
-    const p = propsRef.current;
     w.postMessage({
       type: 'search',
       payload: {
