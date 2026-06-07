@@ -58,16 +58,16 @@
 | Skill | Source | Purpose |
 |-------|--------|---------|
 | God's Hand (800 ST) | Sword Q card | Severe Strike damage |
-| Charge | Sword Q card | 2.5x next physical |
 | Single-Target Boost | Sword 7 card | ×1.5 single-target damage |
 | Apt Pupil | Sword 6 card | Crit rate up |
 | Crit Rate Amp (83) | Level-up | Crit rate up |
 | Arms Master (84) | Level-up | Halves HP costs |
 | Null Elec | No card (inherit) | Cover only weakness — immune to Maziodyne |
 | Enduring Soul | Sword K card | Survive fatal blow + full heal |
+| Ali Dance | No card (inherit) | Halves incoming hit rate |
 
 **Natural skills to keep:** Crit Rate Amp, Arms Master (2)
-**Inherited slots (5):** Null Elec, God's Hand, Charge, Single-Target Boost, Apt Pupil
+**Inherited slots (5):** Null Elec, God's Hand, Single-Target Boost, Apt Pupil, Ali Dance
 
 ---
 
@@ -82,7 +82,7 @@
 ### Turn 2 (Attack)
 1. **Koromaru:** Re-Debilitate if needed (Reaper casts Heat Riser)
 2. **Aigis:** Attack or Orgia Mode
-3. **Switch to Masakado →** God's Hand (800 × 2.5 × 1.5 = **3000 effective power**)
+3. **Switch to Masakado →** God's Hand (800 × 2.5 × 1.5 = **3000 effective power** after Trumpeter's Charge)
 4. **Yukari:** Heal
 
 ### Ongoing
