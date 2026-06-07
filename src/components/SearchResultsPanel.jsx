@@ -168,7 +168,7 @@ export default function SearchResultsPanel(props) {
           {cardInfo.card.length > 0 && (
             <div style={{ marginBottom: '10px' }}>
               <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '6px' }}>
-                Teach these via card:
+                Teach these via Skill Cards:
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {cardInfo.card.map(skill => {
