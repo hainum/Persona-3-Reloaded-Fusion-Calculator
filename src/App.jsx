@@ -106,9 +106,7 @@ export default function App() {
   const handleLoadBookmark = (b) => {
     setView('calculator');
     setTargetPersona(b.targetPersona);
-    const naturalSet = new Set(getNaturalSkills(b.targetPersona));
-    const nonNatural = b.targetSkills.filter(s => !naturalSet.has(s));
-    setTargetSkills([...nonNatural, ...getNaturalSkills(b.targetPersona)]);
+    setTargetSkills(b.targetSkills || []);
     setRequiredPersonas(b.requiredPersonas);
   };
 
