@@ -1,5 +1,5 @@
 import { searchTree, generateFusionTrees, getPathPersonaNames, addPathMetadata, comparePaths, getAllRecipes } from '../lib/FusionCalculator.js';
-import { canInherit, getMaxInheritedSkills, skillData } from '../data/DataParser.js';
+import { canInherit, getMaxInheritedSkills, skillData, personaData } from '../data/DataParser.js';
 import { optimizeSkillSplit } from '../lib/SkillCardOptimizer.js';
 
 const MAX_DEPTH = 20;
@@ -102,9 +102,11 @@ self.onmessage = (e) => {
     let cardInfo = null;
 
     if (allTargetSkills.length > 0) {
+      const naturalSkills = Object.keys(personaData[targetPersona]?.skills || {});
       const splitResult = optimizeSkillSplit({
         personaName: targetPersona,
         targetSkills: allTargetSkills,
+        naturalSkills,
         omittedCards: new Set(omittedCards || []),
         maxInheritedSlots: getMaxInheritedSkills(targetPersona),
         canInherit: (pn, sn) => canInherit(pn, sn),
@@ -123,6 +125,9 @@ self.onmessage = (e) => {
         card: splitResult.card,
         cardsNeeded: splitResult.cardsNeeded,
         inheritedFromCard: splitResult.inheritedFromCard,
+        inheritedNoCard: splitResult.inheritedNoCard,
+        naturalSkills: splitResult.naturalSkills,
+        maxInheritedSlots: splitResult.maxInheritedSlots,
       };
 
       if (inheritSkills.length === 0) {

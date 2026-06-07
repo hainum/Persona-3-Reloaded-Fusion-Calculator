@@ -28,12 +28,17 @@ export function optimizeSkillSplit({
   canInherit,
   getSkillCard,
   getSkillRank,
+  naturalSkills = [],
 }) {
   if (!targetSkills || targetSkills.length === 0) {
     return { inherit: [], card: [], cardsNeeded: [], inheritedFromCard: [], error: null };
   }
 
-  const skillInfos = targetSkills.map(name => {
+  const naturalSet = new Set(naturalSkills);
+  const skillsToSplit = targetSkills.filter(name => !naturalSet.has(name));
+  const naturalTargeted = targetSkills.filter(name => naturalSet.has(name));
+
+  const skillInfos = skillsToSplit.map(name => {
     const card = getSkillCard(name);
     return {
       name,
@@ -90,6 +95,11 @@ export function optimizeSkillSplit({
     inheritedFromCard: inheritSlots
       .filter(s => s.card !== '-' && !s.cardOmitted)
       .map(s => ({ skill: s.name, card: s.card })),
+    inheritedNoCard: inheritSlots
+      .filter(s => s.card === '-' || s.cardOmitted)
+      .map(s => ({ skill: s.name })),
+    naturalSkills: naturalTargeted.map(name => ({ skill: name })),
+    maxInheritedSlots,
     error: null,
   };
 }

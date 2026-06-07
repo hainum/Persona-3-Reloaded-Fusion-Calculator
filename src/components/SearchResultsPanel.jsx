@@ -157,7 +157,7 @@ export default function SearchResultsPanel(props) {
         </div>
       )}
 
-      {cardInfo && (cardInfo.card.length > 0 || cardInfo.inheritedFromCard.length > 0) && (
+      {cardInfo && (cardInfo.card.length > 0 || cardInfo.inheritedFromCard.length > 0 || cardInfo.inheritedNoCard?.length > 0) && (
         <div className="anim-fade-slide-down" style={{
           background: 'rgba(0, 0, 0, 0.3)', border: '1px solid var(--glass-border)',
           borderRadius: '8px', padding: '16px', marginBottom: '16px'
@@ -202,7 +202,7 @@ export default function SearchResultsPanel(props) {
             </div>
           )}
           {cardInfo.inheritedFromCard.length > 0 && (
-            <div>
+            <div style={{ marginBottom: '10px' }}>
               <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '6px' }}>
                 Inherited (saving these cards):
               </div>
@@ -220,9 +220,46 @@ export default function SearchResultsPanel(props) {
               </div>
             </div>
           )}
+          {cardInfo.inheritedNoCard?.length > 0 && (
+            <div style={{ marginBottom: '10px' }}>
+              <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '6px' }}>
+                Inherited (no card source):
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {cardInfo.inheritedNoCard.map(({ skill }) => (
+                  <div key={skill} style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem',
+                    color: '#90caf9'
+                  }}>
+                    <span>{skill}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {cardInfo.naturalSkills?.length > 0 && (
+            <div style={{ marginBottom: '10px' }}>
+              <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '6px' }}>
+                Already learned naturally (no action needed):
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {cardInfo.naturalSkills.map(({ skill }) => (
+                  <div key={skill} style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem',
+                    color: '#ce93d8'
+                  }}>
+                    <span>{skill}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {cardInfo.inherit.length > 0 && (
             <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '8px' }}>
-              {cardInfo.inherit.length} of {cardInfo.inherit.length + cardInfo.card.length} inheritance slots used
+              {cardInfo.inherit.length} of {cardInfo.maxInheritedSlots ?? (cardInfo.inherit.length + cardInfo.card.length)} inheritance slots used
+              {cardInfo.inherit.length >= (cardInfo.maxInheritedSlots ?? 99) && <span style={{ color: '#4caf50', marginLeft: '4px' }}>{'\u2713'}</span>}
             </div>
           )}
         </div>
