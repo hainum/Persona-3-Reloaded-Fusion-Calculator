@@ -140,17 +140,6 @@ export default function App() {
     return targetSkills.filter(s => !canInherit(targetPersona, s));
   }, [targetPersona, targetSkills]);
 
-  const cardToSkills = useMemo(() => {
-    const map = {};
-    for (const [name, skill] of Object.entries(skillData)) {
-      const card = skill.weaponSource || '-';
-      if (card !== '-') {
-        (map[card] ||= []).push(name);
-      }
-    }
-    return map;
-  }, []);
-
   const handleAddSkill = (name) => {
     if (!name || targetSkills.includes(name)) return;
     if (targetSkills.length >= 8) return;
@@ -493,24 +482,21 @@ export default function App() {
             <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1rem' }}>
               <h3 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Omitted Cards ({omittedCards.size})</h3>
               <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
-                Cards you marked as "don't have" — optimizer will avoid suggesting them.
+                Skills whose cards you marked as "don't have".
               </span>
               {omittedCards.size > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
-                  {[...omittedCards].sort().map(card => (
-                    <div key={card} style={{
+                  {[...omittedCards].sort().map(skill => (
+                    <div key={skill} style={{
                       display: 'flex', alignItems: 'center', gap: '8px',
                       padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem',
                     }}>
-                       <span style={{ color: '#ffd54f' }}>{card}</span>
-                       <span className="text-muted" style={{ fontSize: '0.8rem' }}>
-                         {cardToSkills[card]?.join(', ') || '?'}
-                       </span>
+                      <span style={{ color: '#ffd54f' }}>{skill}</span>
                       <button
                         onClick={() => {
                           setOmittedCards(prev => {
                             const next = new Set(prev);
-                            next.delete(card);
+                            next.delete(skill);
                             return next;
                           });
                         }}

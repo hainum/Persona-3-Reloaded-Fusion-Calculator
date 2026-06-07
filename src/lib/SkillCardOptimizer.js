@@ -43,7 +43,7 @@ export function optimizeSkillSplit({
     return {
       name,
       card: card || '-',
-      cardOmitted: omittedCards.has(card),
+      cardOmitted: omittedCards.has(name),
       inheritable: canInherit(personaName, name),
       rank: getSkillRank(name),
       rarity: getCardRarity(card),

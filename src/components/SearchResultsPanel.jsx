@@ -174,7 +174,7 @@ export default function SearchResultsPanel(props) {
                 {cardInfo.card.map(skill => {
                   const entry = cardInfo.cardsNeeded.find(c => c.skill === skill);
                   const cardSrc = entry ? entry.card : '?';
-                  const isOmitted = omittedCards.has(cardSrc);
+                  const isOmitted = omittedCards.has(skill);
                   return (
                     <div key={skill} style={{
                       display: 'flex', alignItems: 'center', gap: '8px',
@@ -184,7 +184,7 @@ export default function SearchResultsPanel(props) {
                       <span style={{ color: isOmitted ? '#ffd54f' : 'var(--p3r-white)' }}>{skill}</span>
                       <span style={{ color: 'var(--p3r-text-muted)' }}>{'\u2192'} {cardSrc}</span>
                       <button
-                        onClick={() => onToggleOmittedCard(cardSrc)}
+                        onClick={() => onToggleOmittedCard(skill)}
                         style={{
                           marginLeft: 'auto', padding: '2px 8px', fontSize: '0.75rem',
                           border: `1px solid ${isOmitted ? '#ffd54f' : 'var(--glass-border)'}`,
