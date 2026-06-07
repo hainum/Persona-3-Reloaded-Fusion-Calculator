@@ -140,6 +140,17 @@ export default function App() {
     return targetSkills.filter(s => !canInherit(targetPersona, s));
   }, [targetPersona, targetSkills]);
 
+  const cardToSkills = useMemo(() => {
+    const map = {};
+    for (const [name, skill] of Object.entries(skillData)) {
+      const card = skill.weaponSource || '-';
+      if (card !== '-') {
+        (map[card] ||= []).push(name);
+      }
+    }
+    return map;
+  }, []);
+
   const handleAddSkill = (name) => {
     if (!name || targetSkills.includes(name)) return;
     if (targetSkills.length >= 8) return;
@@ -491,7 +502,10 @@ export default function App() {
                       display: 'flex', alignItems: 'center', gap: '8px',
                       padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem',
                     }}>
-                      <span style={{ color: '#ffd54f' }}>{card}</span>
+                       <span style={{ color: '#ffd54f' }}>{card}</span>
+                       <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                         {cardToSkills[card]?.join(', ') || '?'}
+                       </span>
                       <button
                         onClick={() => {
                           setOmittedCards(prev => {
