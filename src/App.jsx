@@ -479,6 +479,55 @@ export default function App() {
             </button>
             </div>
 
+            <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1rem' }}>
+              <h3 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Omitted Cards ({omittedCards.size})</h3>
+              <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
+                Cards you marked as "don't have" — optimizer will avoid suggesting them.
+              </span>
+              {omittedCards.size > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
+                  {[...omittedCards].sort().map(card => (
+                    <div key={card} style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem',
+                    }}>
+                      <span style={{ color: '#ffd54f' }}>{card}</span>
+                      <button
+                        onClick={() => {
+                          setOmittedCards(prev => {
+                            const next = new Set(prev);
+                            next.delete(card);
+                            return next;
+                          });
+                        }}
+                        style={{
+                          marginLeft: 'auto', padding: '2px 8px', fontSize: '0.75rem',
+                          border: '1px solid var(--glass-border)', borderRadius: '4px', cursor: 'pointer',
+                          background: 'rgba(255,255,255,0.05)', color: 'var(--p3r-text-muted)'
+                        }}
+                      >
+                        remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {omittedCards.size > 0 && (
+                <button
+                  className="btn-danger"
+                  onClick={() => setOmittedCards(new Set())}
+                  style={{ fontSize: '0.85rem', padding: '4px 10px', marginBottom: '8px' }}
+                >
+                  Clear All
+                </button>
+              )}
+              {omittedCards.size === 0 && (
+                <p className="text-muted" style={{ fontSize: '0.85rem', margin: 0 }}>
+                  None omitted. Toggle cards in the Skill Plan to mark them as unavailable.
+                </p>
+              )}
+            </div>
+
             <button
               className="btn-outline flex items-center justify-between"
               style={{ width: '100%', padding: '10px 16px', textTransform: 'none', letterSpacing: 'normal', fontSize: '0.9rem', gap: '6px', justifyContent: 'center', marginTop: '0.5rem' }}
