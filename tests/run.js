@@ -8,6 +8,7 @@ const testFiles = [
   'bookmark.test.js',
   'unlock.test.js',
   'algorithm.test.js',
+  'card-optimizer.test.js',
 ];
 
 function runTest(file) {

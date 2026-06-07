@@ -31,6 +31,12 @@ export default function App() {
   const [bookmarkDrawerOpen, setBookmarkDrawerOpen] = useState(false);
   const [saveBookmarkConfig, setSaveBookmarkConfig] = useState(null);
   const [searchKey, setSearchKey] = useState(0);
+  const [omittedCards, setOmittedCards] = useState(() => {
+    try {
+      const saved = localStorage.getItem('p3r_omitted_cards');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
   const [isScrolled, setIsScrolled] = useState(false);
   const [levelText, setLevelText] = useState(String(currentLevel));
   const searchTimeoutRef = useRef(null);
@@ -48,6 +54,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('p3r_currentLevel', currentLevel);
   }, [currentLevel]);
+
+  useEffect(() => {
+    localStorage.setItem('p3r_omitted_cards', JSON.stringify([...omittedCards]));
+  }, [omittedCards]);
 
   useEffect(() => {
     saveBookmarks(bookmarks);
@@ -119,7 +129,7 @@ export default function App() {
 
   const handleAddSkill = (name) => {
     if (!name || targetSkills.includes(name)) return;
-    if (targetPersona && targetSkills.length >= getMaxInheritedSkills(targetPersona)) return;
+    if (targetSkills.length >= 8) return;
     setTargetSkills(prev => [...prev, name]);
   };
 
@@ -175,7 +185,7 @@ export default function App() {
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [targetPersona, targetSkills, requiredPersonas, customPersonas, excludedPersonas]);
+  }, [targetPersona, targetSkills, requiredPersonas, customPersonas, excludedPersonas, omittedCards]);
 
   return (
     <>
@@ -297,9 +307,9 @@ export default function App() {
             <div style={{ marginTop: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '0.5rem' }}>
                 <h3 style={{ fontSize: '0.95rem', margin: 0 }}>Target Skills</h3>
-                {targetPersona && (
+                  {targetPersona && (
                   <span style={{ fontSize: '0.8rem', color: 'var(--p3r-text-muted)' }}>
-                    {targetSkills.length}/{getMaxInheritedSkills(targetPersona)} skills
+                    {targetSkills.length}/8 skills
                   </span>
                 )}
               </div>
@@ -308,7 +318,7 @@ export default function App() {
                 skillOptions={skillOptions}
                 selectedSkills={targetSkills}
                 onSelect={handleAddSkill}
-                isFull={targetPersona ? targetSkills.length >= getMaxInheritedSkills(targetPersona) : false}
+                isFull={targetSkills.length >= 8}
               />
               {targetSkills.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
@@ -466,7 +476,7 @@ export default function App() {
             </button>
           </aside>
 
-          <SearchResultsPanel
+            <SearchResultsPanel
             searchKey={searchKey}
             targetPersona={targetPersona}
             targetSkills={targetSkills}
@@ -475,6 +485,15 @@ export default function App() {
             currentLevel={currentLevel}
             customPersonas={customPersonas}
             bookmarks={bookmarks}
+            omittedCards={omittedCards}
+            onToggleOmittedCard={(card) => {
+              setOmittedCards(prev => {
+                const next = new Set(prev);
+                if (next.has(card)) next.delete(card);
+                else next.add(card);
+                return next;
+              });
+            }}
             onDeleteBookmark={handleDeleteBookmark}
             onAddExcludedPersona={handleAddExcludedPersona}
           />
