@@ -163,7 +163,7 @@ export default function SearchResultsPanel(props) {
           borderRadius: '8px', padding: '16px', marginBottom: '16px'
         }}>
           <h3 style={{ margin: '0 0 10px', fontSize: '1rem', color: 'var(--p3r-cyan)' }}>
-            Skill Cards Required
+            Skill Plan
           </h3>
           {cardInfo.card.length > 0 && (
             <div style={{ marginBottom: '10px' }}>
