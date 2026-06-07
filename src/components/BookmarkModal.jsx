@@ -6,19 +6,8 @@ import { generateBookmarkName } from '../lib/BookmarkManager';
 import { canInherit, personaData } from '../data/DataParser';
 
 export function SaveBookmarkModal({ initialPersona, initialSkills, initialRequiredPersonas, personaOptions, skillOptions, onSave, onClose }) {
-  const getNaturalSkills = (personaName) => {
-    const skills = personaData[personaName]?.skills;
-    return skills ? Object.keys(skills) : [];
-  };
-
-  const stripNaturalSkills = (personaName, skills) => {
-    if (!personaName) return skills;
-    const naturalSet = new Set(getNaturalSkills(personaName));
-    return skills.filter(s => !naturalSet.has(s));
-  };
-
   const [targetPersona, setTargetPersona] = useState(initialPersona || '');
-  const [targetSkills, setTargetSkills] = useState(stripNaturalSkills(initialPersona, initialSkills || []));
+  const [targetSkills, setTargetSkills] = useState(initialSkills || []);
   const [requiredPersonas, setRequiredPersonas] = useState(initialRequiredPersonas || []);
   const [name, setName] = useState('');
 

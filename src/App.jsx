@@ -78,12 +78,7 @@ export default function App() {
   }, [customPersonas]);
 
   const handleSaveBookmark = (config) => {
-    const naturalSet = new Set(getNaturalSkills(config.targetPersona));
-    const cleanConfig = {
-      ...config,
-      targetSkills: config.targetSkills.filter(s => !naturalSet.has(s)),
-    };
-    const bookmark = createBookmark(cleanConfig);
+    const bookmark = createBookmark(config);
     setBookmarks(prev => [...prev, bookmark]);
   };
 
@@ -112,7 +107,8 @@ export default function App() {
     setView('calculator');
     setTargetPersona(b.targetPersona);
     const naturalSet = new Set(getNaturalSkills(b.targetPersona));
-    setTargetSkills(b.targetSkills.filter(s => !naturalSet.has(s)));
+    const nonNatural = b.targetSkills.filter(s => !naturalSet.has(s));
+    setTargetSkills([...nonNatural, ...getNaturalSkills(b.targetPersona)]);
     setRequiredPersonas(b.requiredPersonas);
   };
 
