@@ -258,8 +258,8 @@ export default function SearchResultsPanel(props) {
           )}
           {cardInfo.inherit.length > 0 && (
             <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: '8px' }}>
-              {cardInfo.inherit.length} of {cardInfo.maxInheritedSlots ?? (cardInfo.inherit.length + cardInfo.card.length)} inheritance slots used
-              {cardInfo.inherit.length >= (cardInfo.maxInheritedSlots ?? 99) && <span style={{ color: '#4caf50', marginLeft: '4px' }}>{'\u2713'}</span>}
+              {cardInfo.inherit.length} of {cardInfo.maxInheritedSlots ?? 8} inheritance slots used
+              {cardInfo.inherit.length >= (cardInfo.maxInheritedSlots ?? 8) && <span style={{ color: '#4caf50', marginLeft: '4px' }}>{'\u2713'}</span>}
             </div>
           )}
         </div>
